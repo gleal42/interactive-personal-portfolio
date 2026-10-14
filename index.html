@@ -649,8 +649,10 @@ let climbStart=-900;                              // set from the screen size, s
 function climbY(t){const y=climbStart+CLIMB_V*t;return y<FLOOR-30?y:FLOOR-30*Math.exp(-(y-(FLOOR-30))/30);}
 const climbEnd=()=>(FLOOR-climbStart)/CLIMB_V+1.3;
 // each limb moves once per cycle, opposite hand and foot together
-// hands reach up one rung at a time, twice per cycle, so they stay above his head; feet step two rungs
-const LIMBS={RH:{ph:0,off:172,max:HANDLE_TOP,x:17.5,per:.5,win:.5},LF:{ph:.12,off:12,max:FLOOR,x:-9,per:1,win:.32},LH:{ph:.25,off:172,max:HANDLE_TOP,x:-17.5,per:.5,win:.5},RF:{ph:.62,off:12,max:FLOOR,x:9,per:1,win:.32}};
+// like the reference: left hand and left foot move up together, then the right pair half a cycle later.
+// each limb moves two rungs, so the hands always hold different rungs, leapfrogging each other
+const LIMBS={LH:{ph:0,off:168,max:HANDLE_TOP,x:-13.5,per:1,win:.42},LF:{ph:0,off:12,max:FLOOR,x:-9,per:1,win:.42},
+             RH:{ph:.5,off:168,max:HANDLE_TOP,x:13.5,per:1,win:.42},RF:{ph:.5,off:12,max:FLOOR,x:9,per:1,win:.42}};
 function limbRungAt(L_,m){const Pl=CLIMB_P*L_.per,te=L_.ph*CLIMB_P+(m+L_.win)*Pl;return Math.min(L_.max,rungY(climbY(te)+L_.off));}
 function limbOnLadder(name,t){
   const L_=LIMBS[name], Pl=CLIMB_P*L_.per, n=Math.floor((t-L_.ph*CLIMB_P)/Pl), s=L_.ph*CLIMB_P+n*Pl, e=s+L_.win*Pl;
@@ -717,7 +719,7 @@ function poseIntro(ti,clock){
     feet[0].p.y+=14*LF.lift; feet[1].p.y+=14*RF.lift;   // knee comes up high on each step
     const hands=[V3(LIMBS.LH.x,LH.y+7*LH.lift,2+9*LH.lift),V3(LIMBS.RH.x,RH.y+7*RH.lift,2+9*RH.lift)];
     applyRig({root:V3(0,y+bob,13.5),yaw:Math.PI,tip:.04,hy:64,spX:.08,hdX:-.28+.05*Math.sin(ti*.7),hdY:.1*Math.sin(ti*.4),feet,hands,
-      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(1.6*side,-.5,-.1)});
+      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(1.5*side,-.7,-.15)});
     return {onLadder:true};
   }
   const tb=Math.min(ti-tA,T_ENTRY), b=entryBody(tb);
