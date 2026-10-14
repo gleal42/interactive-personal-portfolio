@@ -1,9 +1,13 @@
 # GL — personal homepage
 
 A single-page site built around one image: a man in a birdcage hanging in the sky.
-He sits cross-legged on the floor of the cage. Click **let go** and he stands up, pushes the
-door open, crouches through, turns on the edge of the cage, leans back on straight arms,
-lets go, and falls backwards into the clouds.
+The page opens with him climbing the ladder toward the cage.
+
+- Click **let go** while he is on the ladder and he lets go right there, falling backwards into the clouds.
+- Otherwise he climbs up through a hatch in the cage floor, steps off, and sits cross-legged.
+  Click **let go** then and he stands up, pushes the door open, crouches through, turns on the
+  edge of the cage, leans back on straight arms, lets go, and falls backwards head-first.
+- After a fall, clicking again starts the climb over.
 
 > *Sometimes you have to let go of the life you planned to find the life that's waiting for you.*
 > (often attributed to Joseph Campbell)
@@ -53,6 +57,7 @@ Most things are a single constant near the top of the script in `index.html`:
 | Man's size | `FIG_S` |
 | Bar thickness | `THICK` |
 | Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
+| Climbing speed | `CLIMB_P` (seconds per two rungs) |
 
 ## Note on privacy
 

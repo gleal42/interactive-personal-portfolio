@@ -247,8 +247,13 @@ function ring(y,r,rad,mat){const m=new THREE.Mesh(new THREE.TorusGeometry(r,rad*
 const BAR=2.1;
 
 /* cage: base, bars, dome, rings */
-add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+8,R+4,FLOOR+14,96),brass)).position.y=(FLOOR-14)/2;
-add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+4,R-6,6,96),brass)).position.y=-17;
+const HATCH=27;   // round opening in the floor where the ladder comes up
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+8,R+4,FLOOR+14,96,1,true),brass)).position.y=(FLOOR-14)/2;
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+4,R-6,6,96,1,true),brass)).position.y=-17;
+{const top=new THREE.Mesh(new THREE.RingGeometry(HATCH,R+8,96,1),brass);top.rotation.x=-Math.PI/2;top.position.y=FLOOR;add(cage,top);
+ const bot=new THREE.Mesh(new THREE.RingGeometry(HATCH,R-6,96,1),brass);bot.rotation.x=Math.PI/2;bot.position.y=-20;add(cage,bot);
+ const wallM=brass.clone();wallM.side=THREE.BackSide;
+ const wall=new THREE.Mesh(new THREE.CylinderGeometry(HATCH,HATCH,FLOOR+20,48,1,true),wallM);wall.position.y=(FLOOR-20)/2;add(cage,wall);}
 cage.add(ring(-14,R+5,3.4/THICK,brass)); cage.add(ring(-4,R+7,1.8/THICK,brass)); cage.add(ring(FLOOR,R+8,2.6/THICK,brass));
 const off=DOOR-1.5*S, doorIdx=[];
 for(let i=0;i<NB;i++){const a=off+i*S;const d=Math.atan2(Math.sin(a-DOOR),Math.cos(a-DOOR));
@@ -276,11 +281,12 @@ for(const y of [FLOOR+3,MID,DOOR_TOP-2]) door.add(tube(arc(hingeA,freeA,y).map(v
 const openSign=(()=>{const t=new THREE.Vector3().subVectors(P(freeA,0),hingeP);const r=v=>Math.hypot(v.x+hingeP.x,v.z+hingeP.z);
   return r(t.clone().applyAxisAngle(new THREE.Vector3(0,1,0),.2))>r(t)?1:-1;})();
 /* ladder: thin dark iron, like the original */
-{const len=4200;
- for(const x of[-17,17]){const rail=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.1,len,8),iron);rail.position.set(x,-len/2,0);rail.castShadow=true;cage.add(rail);}
- const n=Math.floor(len/16),rung=new THREE.CylinderGeometry(1.6,1.6,34,6);rung.rotateZ(Math.PI/2);
+{const len=4200, topY=FLOOR+60;
+ for(const x of[-17,17]){const rail=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.1,len+topY,8),iron);rail.position.set(x,(topY-len)/2,0);rail.castShadow=true;cage.add(rail);
+   const cap=new THREE.Mesh(new THREE.SphereGeometry(2.6,12,8),iron);cap.position.set(x,topY,0);cage.add(cap);}
+ const n=Math.floor(len/26)+3,rung=new THREE.CylinderGeometry(1.6,1.6,34,6);rung.rotateZ(Math.PI/2);
  const im=new THREE.InstancedMesh(rung,iron,n),m=new THREE.Matrix4();
- for(let i=0;i<n;i++){m.makeTranslation(0,-10-i*16,0);im.setMatrixAt(i,m);}cage.add(im);}
+ for(let i=0;i<n;i++){m.makeTranslation(0,FLOOR+52-i*26,0);im.setMatrixAt(i,m);}cage.add(im);}
 /* merge the many static pieces into one mesh per material: far fewer draw calls, smoother frames */
 function mergeGeos(geos){let nV=0,nI=0;for(const g of geos){if(!g.index)g.setIndex([...Array(g.attributes.position.count).keys()]);nV+=g.attributes.position.count;nI+=g.index.count;}
   const pos=new Float32Array(nV*3),nor=new Float32Array(nV*3),uv=new Float32Array(nV*2),idx=new Uint32Array(nI);let vo=0,io=0;
@@ -600,7 +606,7 @@ function poseFalling(u){
   // he keeps tumbling backwards past horizontal until he is falling head-first, slowly twisting
   const target=-2.55, kd=Math.max(.5,rel.w0/(target-rel.tip0));
   const dTip=(rel.w0/kd)*(1-Math.exp(-kd*u))-.1*Math.max(0,u-2.5);
-  const twist=.14*smoother(u/2.6)+.06*Math.sin(u*.7), roll=.1*smoother(u/2)+.05*Math.sin(u*.9);   // stays in profile, like the reference
+  const twist=(rel.twistAmp??.14)*smoother(u/2.6)+.06*Math.sin(u*.7), roll=.1*smoother(u/2)+.05*Math.sin(u*.9);   // stays in profile, like the reference
   const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,twist,roll,"XYZ")));
   fig.quaternion.copy(q);
   hips.position.y=rel.hy;
@@ -614,7 +620,7 @@ function poseFalling(u){
   spine.rotation.set(mix(rel.spX,-.38,ar)+.04*Math.sin(u*1.3),.05*Math.sin(u*.8),0);
   head.rotation.set(mix(rel.hdX,-.6,smoother(u/1.3)),.12*Math.sin(u*.9),0);
   // arms reach up behind him, legs bend and kick apart; everything drifts slowly in the wind
-  const uu=u+T_PIVOT; armsFree(uu,smooth(uu/1.2));
+  const uu=u+(rel.uOff??T_PIVOT); armsFree(uu,smooth(uu/1.2));
   const ka2=smoother(u/1.1), kl=smoother(u/.9), on=smooth(u/1.2);
   const a1=Math.sin(u*1.25),a2=Math.sin(u*1.1+1.9),l1=Math.sin(u*1.05+.6),l2=Math.sin(u*.95+2.6);
   const DR={arms:[[-.55+.28*a1*on,0,.42+.12*a2*on],[-.6-.25*Math.max(0,a1)*on,0,0],[-.95+.25*a2*on,0,-.3-.1*a1*on],[-.35-.3*Math.max(0,a2)*on,0,0]],
@@ -635,8 +641,105 @@ function smoothPose(dt){
 
 buildGrips();
 
+/* ---------- intro: he climbs the ladder, comes up through the hatch and sits down ---------- */
+const RUNG=26, HANDLE_TOP=FLOOR+2*RUNG;           // rungs every 26 units, two above the floor as handles
+const rungY=y=>FLOOR-RUNG*Math.round((FLOOR-y)/RUNG);
+const CLIMB_P=1.2, CLIMB_V=2*RUNG/CLIMB_P;        // one full cycle climbs two rungs
+let climbStart=-900;                              // set from the screen size, so he climbs into view
+function climbY(t){const y=climbStart+CLIMB_V*t;return y<FLOOR-30?y:FLOOR-30*Math.exp(-(y-(FLOOR-30))/30);}
+const climbEnd=()=>(FLOOR-climbStart)/CLIMB_V+1.3;
+// each limb moves once per cycle, opposite hand and foot together
+const LIMBS={RH:{ph:0,off:168,max:HANDLE_TOP,x:11},LF:{ph:.12,off:12,max:FLOOR,x:-9},LH:{ph:.5,off:168,max:HANDLE_TOP,x:-11},RF:{ph:.62,off:12,max:FLOOR,x:9}};
+function limbRungAt(L_,m){const te=(L_.ph+m+.32)*CLIMB_P;return Math.min(L_.max,rungY(climbY(te)+L_.off));}
+function limbOnLadder(name,t){
+  const L_=LIMBS[name], n=Math.floor(t/CLIMB_P-L_.ph), s=(L_.ph+n)*CLIMB_P, e=s+.32*CLIMB_P;
+  const prev=limbRungAt(L_,n-1), cur=limbRungAt(L_,n);
+  if(t>=e||prev===cur) return {y:t>=e?cur:prev,lift:0};
+  const k=smoother((t-s)/(e-s));return {y:mix(prev,cur,k),lift:Math.sin(Math.PI*k)};}
+
+// after the climb: step back off the top rung, turn, walk to his spot, sit down cross-legged
+const SPOT=polar(24,.30,FLOOR);
+const entry=track([
+  [0,   0,15, Math.PI,66,.12, .06,-.2,0],
+  [.7,  0,26, Math.PI,72,.05, 0,  -.05,0],
+  [1.3, 2,34, Math.PI,73,.02, 0,   0,-.4],
+  [2.1, SPOT.x,28, .3,73.5,.05,0,-.05,0],
+  [2.6, SPOT.x,SPOT.z,.3,73.5,.05,0,-.05,0],
+  [3.25,SPOT.x,SPOT.z,.3,42,.45,0,.1,0],
+  [3.85,SPOT.x,SPOT.z,.3,15,.48,0,.12,0],
+  [4.5, SPOT.x,SPOT.z,.3,10,.08,0,.06,0]]);
+const T_ENTRY=4.5, T_OFF_LADDER=1.0;
+function entryBody(tb){const [x,z,yaw,hy,spX,tip,hdX,hdY]=entry(tb);return {root:V3(x,FLOOR,z),hy,yaw,spX,tip,hdX,hdY};}
+function entryFoot(tb,side){             // planted steps off the ladder and around, then crossing his legs
+  const rungFoot=V3(-side*9,FLOOR,6), back=V3(-side*9,FLOOR,36);
+  const under=(tt,f=2)=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),f*FIG_S);};
+  const steps=side<0?[[.05,.55,rungFoot,back,Math.PI,Math.PI],[1.3,1.75,back,under(1.9),Math.PI,1.6],[2.2,2.6,under(1.9),under(2.6),1.6,.3]]
+                    :[[.6,1.1,rungFoot,back,Math.PI,Math.PI],[1.7,2.15,back,under(2.3),Math.PI,1.0],[2.45,2.8,under(2.3),under(2.6),1.0,.3]];
+  let p=rungFoot.clone(),yaw=Math.PI;
+  for(const [a,b,p0,p1,y0,y1] of steps){if(tb<a)break;const k=smoother((tb-a)/(b-a));p=p0.clone().lerp(p1,k);p.y+=8*Math.sin(Math.PI*k);yaw=mix(y0,y1,k);}
+  // sitting down: feet slide from under him to crossed in front
+  const kk=smoother((tb-3.55)/.75);
+  if(kk>0){const b=entryBody(T_ENTRY);const cross=bodyPoint(b,-6.5*side,3,side>0?17:11);p=p.clone().lerp(cross,kk);p.y+=4*Math.sin(Math.PI*kk)*FIG_S;yaw=mix(yaw,b.yaw-1.15*side,kk);}
+  return {p,yaw,cross:kk};}
+function entryHand(tb,arm,side){
+  const handle=V3(-side*12,HANDLE_TOP,2);
+  const relaxedAt=tt=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};
+  const leave=side<0?.75:1.0;
+  let p;
+  if(tb<leave)p=handle;
+  else{const k=smoother((tb-leave)/.5);p=handle.clone().lerp(relaxedAt(tb),k);}
+  const kk=smoother((tb-3.4)/.8);
+  if(kk>0){(side>0?L:Rt).leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;p=p.clone().lerp(_kp,kk);}
+  return p;}
+
+function applyRig(spec){                 // shared: body, then legs and arms solved onto their targets
+  fig.position.copy(spec.root); fig.rotation.set(0,0,0); fig.rotateY(spec.yaw); fig.rotateX(spec.tip);
+  hips.position.y=spec.hy; spine.rotation.set(spec.spX,0,0); head.rotation.set(spec.hdX,spec.hdY||0,0);
+  leanNow=0; fig.updateMatrixWorld(true);
+  for(const [leg,f,side] of [[L.leg,spec.feet[0],1],[Rt.leg,spec.feet[1],-1]]){
+    const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S; const c=f.cross||0;
+    const poleL=spec.kneePole?spec.kneePole(side):V3(mix(.15,1.1,c)*side,mix(-.2,.35,c),mix(1,.45,c));
+    const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
+    leg.h.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(leg.h,leg.k,LEG1,LEG2,cage.localToWorld(tgt),poleW,1); setFlatFoot(leg,f.yaw);}
+  for(const [arm,g,side] of [[L.arm,spec.hands[0],1],[Rt.arm,spec.hands[1],-1]]){
+    const pole=(spec.elbowPole?spec.elbowPole(side):V3(.8*side,-1,-.35)).applyQuaternion(fig.quaternion).multiplyScalar(80);
+    arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
+}
+function poseIntro(ti,clock){
+  const tA=climbEnd();
+  if(ti<tA){                                   // climbing, seen from behind
+    const y=climbY(ti), bob=1.5*Math.sin(ti/CLIMB_P*Math.PI*4);
+    const LH=limbOnLadder("LH",ti),RH=limbOnLadder("RH",ti),LF=limbOnLadder("LF",ti),RF=limbOnLadder("RF",ti);
+    const feet=[{p:V3(LIMBS.LF.x,LF.y,6+5*LF.lift),yaw:Math.PI},{p:V3(LIMBS.RF.x,RF.y,6+5*RF.lift),yaw:Math.PI}];
+    feet[0].p.y+=6*LF.lift; feet[1].p.y+=6*RF.lift;
+    const hands=[V3(LIMBS.LH.x,LH.y+7*LH.lift,2+9*LH.lift),V3(LIMBS.RH.x,RH.y+7*RH.lift,2+9*RH.lift)];
+    applyRig({root:V3(0,y+bob,15),yaw:Math.PI,tip:.06,hy:64,spX:.12,hdX:-.28+.05*Math.sin(ti*.7),hdY:.1*Math.sin(ti*.4),feet,hands,
+      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(.9*side,-1,-.4)});
+    return {onLadder:true};
+  }
+  const tb=Math.min(ti-tA,T_ENTRY), b=entryBody(tb);
+  applyRig({...b,feet:[entryFoot(tb,1),entryFoot(tb,-1)],hands:[entryHand(tb,L.arm,1),entryHand(tb,Rt.arm,-1)]});
+  return {onLadder:tb<T_OFF_LADDER, seated:ti-tA>=T_ENTRY};
+}
+
+/* he lets go of the ladder: falls backwards and twists into profile as he tumbles */
+function captureLadderFall(ti,clock){
+  const pelAt=tt=>{poseIntro(tt,clock); fig.updateMatrixWorld(true); const p=new THREE.Vector3(); hips.getWorldPosition(p); stage.worldToLocal(p); return p;};
+  const p0=pelAt(ti-1/60), pel=pelAt(ti);
+  const vel=pel.clone().sub(p0).multiplyScalar(60).multiplyScalar(.4);
+  const back=V3(0,0,1).applyQuaternion(cage.getWorldQuaternion(new THREE.Quaternion())); vel.addScaledVector(back,30); vel.y+=12;
+  const qs=new THREE.Quaternion(); fig.getWorldQuaternion(qs); const qstage=new THREE.Quaternion(); stage.getWorldQuaternion(qstage); qs.premultiply(qstage.invert());
+  const bones=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone());
+  armCap=bones.slice(0,4);
+  stage.add(fig);
+  rel={pel,vel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x,w0:-1.5,tip0:.06,uOff:0,twistAmp:1.35};
+}
+
+
 /* ---------- layout: map plate pixels to screen and world ---------- */
-let W=1,H=1,unit=1;
+let W=1,H=1,unit=1,climbSet=false;
 function layout(){
   W=stageEl.clientWidth; H=stageEl.clientHeight;
   const portrait=W/H<=1;
@@ -654,6 +757,7 @@ function layout(){
   const sx=portrait?W*.65:x0+ANCHOR.x*k, sy=y0+(ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
+  if(!climbSet){const depth=(stage.position.y+Hw/2)/unit;climbStart=-Math.min(1000,depth+40);climbSet=true;}
   // sun shadows cover the cage
   const c=stage.position.clone().add(new THREE.Vector3(0,110*unit,0));
   sun.target.position.copy(c); sun.position.copy(c).addScaledVector(SUN_DIR,900*unit);
@@ -675,8 +779,26 @@ function swayAt(t,clock){
   const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
   return {rx:rx+relTilt.x*d, rz:rz+relTilt.z*d};
 }
+let mode=reduce?"main":"intro", introStart=null, fallStart=null, pendingMain=false, introState=null;
 function frame(now){
   const clock=now/1000;
+  if(introStart===null)introStart=now;
+  if(mode==="intro"){
+    const ti=(now-introStart)/1000;
+    door.rotation.y=0;
+    if(fig.parent!==cage)cage.add(fig);
+    const s=swayAt(null,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
+    introState=poseIntro(ti,clock);
+    shadow.visible=fig.position.y>FLOOR-3&&Math.hypot(fig.position.x,fig.position.z)>HATCH+4;
+    shadow.position.x=fig.position.x; shadow.position.z=fig.position.z;
+    if(introState.seated){mode="main"; t0=pendingMain?now:null; pendingMain=false;}
+    return finishFrame(now);
+  }
+  if(mode==="ladderFall"){
+    const s=swayAt(null,clock); hang.rotation.set(s.rx,0,s.rz);
+    poseFalling((now-fallStart)/1000); shadow.visible=false;
+    return finishFrame(now);
+  }
   const t=t0===null?null:(now-t0)/1000, tt=t===null?-1:t;
   door.rotation.y=openSign*doorAngleAt(t);
   if(tt<T_RELEASE){
@@ -690,6 +812,9 @@ function frame(now){
     const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
     poseFalling(t-T_RELEASE); shadow.visible=false;
   }
+  finishFrame(now);
+}
+function finishFrame(now){
   const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
   if(!window.__manual) smoothPose(dt);
   renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera);
@@ -703,7 +828,9 @@ new THREE.TextureLoader().load("assets/plate.jpg",tex=>{
   layout(); canvas.classList.add("ready");
   const loop=n=>{frame(n);requestAnimationFrame(loop)};
   if(!window.__manual) requestAnimationFrame(loop);
-  window.__seek=(t,clock=10)=>{const now=clock*1000; t0=t===null?null:now-t*1000; frame(now);};
+  window.__seek=(t,clock=10)=>{const now=clock*1000; mode="main"; t0=t===null?null:now-t*1000; frame(now);};
+  window.__seekIntro=(ti,clock=10)=>{const now=clock*1000; mode="intro"; introStart=now-ti*1000; frame(now);};
+  window.__ladderFall=(ti,u)=>{window.__seekIntro(ti); captureLadderFall(ti,10); mode="ladderFall"; fallStart=10000-u*1000; frame(10000);};
   window.__dbg={camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door};
   window.__ready=true;
 });
@@ -712,6 +839,14 @@ new ResizeObserver(()=>layout()).observe(stageEl);
 document.getElementById("letgo").addEventListener("click",()=>{
   stageEl.classList.add("played");
   const now=performance.now();
+  if(mode==="intro"){
+    if(introState&&introState.onLadder){captureLadderFall((now-introStart)/1000,now/1000); mode="ladderFall"; fallStart=now;}   // lets go of the ladder
+    else pendingMain=true;                                // already inside: sits down, then starts
+    return;}
+  const busy=mode==="main"&&t0!==null&&(now-t0)/1000<T_RELEASE+7;
+  if(busy)return;
+  if(mode==="ladderFall"||(mode==="main"&&t0!==null)){    // after a fall: start again from the climb
+    mode="intro"; introStart=now; cage.add(fig); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null; return;}
   t0=reduce?now-30000:now; released=false; cage.add(fig); armCap=null; rel=null; smoothState=null;
 });
 </script>
