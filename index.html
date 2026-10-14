@@ -78,10 +78,10 @@ h1 .line:nth-child(4){animation-delay:.75s}
   .hint{margin-top:10px;font-size:.8rem}
 }
 @media (max-aspect-ratio:1/1){
-  .stage{background-position:85% 100%;background-size:auto 66%}
+  .stage{background-position:85% 100%;background-size:auto 62%}
   .stage{background-color:#2e5f71}
   .stage::after{display:none}
-  .copy{align-self:start;padding-top:4.5vh}
+  .copy{align-self:start;padding-top:11vh}
   h1{font-size:clamp(1.15rem,5.2vw,1.45rem);line-height:1.45;max-width:17em}
   .tallbr{display:inline}
   .hint{margin-top:14px;font-size:.88rem}
@@ -641,7 +641,7 @@ function layout(){
   W=stageEl.clientWidth; H=stageEl.clientHeight;
   const portrait=W/H<=1;
   let bx=0,by=0,bw=W,bh=H,px=.72,py=.5;
-  if(portrait){by=H*.34;bh=H*.66;px=.85;py=1;}
+  if(portrait){by=H*.38;bh=H*.62;px=.85;py=1;}
   else if(H<560){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the clouds to the right of the quote
   const k=Math.max(bw/PW,bh/PH), w=PW*k, h=PH*k, x0=bx+(bw-w)*px, y0=by+(bh-h)*py;
   const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
@@ -650,7 +650,8 @@ function layout(){
   camera.aspect=W/H; const D=3000; camera.position.set(0,0,D); camera.updateProjectionMatrix();
   const Hw=2*D*Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
   unit=k*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
-  const sx=portrait?W*.65:x0+ANCHOR.x*k, sy=portrait?y0+(ANCHOR.y+40)*k:y0+ANCHOR.y*k;
+  const shortWide=!portrait&&H<560;
+  const sx=portrait?W*.65:x0+ANCHOR.x*k, sy=y0+(ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
   // sun shadows cover the cage
