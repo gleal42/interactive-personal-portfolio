@@ -1,5 +1,7 @@
 # GL — personal homepage
 
+**Live site: [gleal42.github.io/interactive-personal-portfolio](https://gleal42.github.io/interactive-personal-portfolio/)**
+
 A single-page site built around one image: a man in a birdcage hanging in the sky.
 The page opens with him climbing the ladder toward the cage.
 
@@ -34,8 +36,18 @@ Opening `index.html` directly from disk will not load the textures (browsers blo
 
 ## Deploy
 
-It is plain static files, so GitHub Pages, Netlify, Vercel or Cloudflare Pages all work with no build step.
-For GitHub Pages: *Settings → Pages → Deploy from branch → `main` / root*.
+The site is published with **GitHub Pages** from the `main` branch: every push to `main`
+goes live at <https://gleal42.github.io/interactive-personal-portfolio/> within a minute or two.
+
+It is plain static files with no build step, so it also works on Netlify, Vercel or Cloudflare Pages.
+
+To set up Pages on a fork:
+
+1. *Settings → Pages*
+2. *Build and deployment → Source:* **Deploy from a branch**
+3. *Branch:* **`main`**, folder **`/ (root)`** → **Save**
+
+The site appears at `https://<username>.github.io/<repository>/`.
 
 ## Structure
 
@@ -59,7 +71,7 @@ Most things are a single constant near the top of the script in `index.html`:
 | Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
 | Climbing speed | `CLIMB_P` (seconds per two rungs) |
 
-## Note on privacy
+## Note on the photos
 
-`assets/face_*.jpg` are cropped photos of a real person. Keep this repository **private**
-unless you are happy for those photos to be public.
+`assets/face_*.jpg` are cropped photos of the site's owner, used to texture the 3D head.
+Please don't reuse them outside this project.
