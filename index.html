@@ -126,7 +126,7 @@ const R=84, STRAIGHT=150, DOME=74, NB=36, S=2*Math.PI/NB, MID=30;
 const DOOR=1.2;                      // door faces right, turned a little toward the camera
 const DOOR_TOP=147, FLOOR=8;   // the door opening reaches the top ring
 const FIG_S=1.12;               // the man, 12% bigger
-const T_RELEASE=5.3;
+let T_RELEASE=0;   // set from the fall simulation below
 
 const canvas=document.getElementById("scene"), stageEl=document.getElementById("stage");
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -271,6 +271,18 @@ const openSign=(()=>{const t=new THREE.Vector3().subVectors(P(freeA,0),hingeP);c
  const n=Math.floor(len/16),rung=new THREE.CylinderGeometry(1.6,1.6,34,6);rung.rotateZ(Math.PI/2);
  const im=new THREE.InstancedMesh(rung,iron,n),m=new THREE.Matrix4();
  for(let i=0;i<n;i++){m.makeTranslation(0,-10-i*16,0);im.setMatrixAt(i,m);}cage.add(im);}
+/* merge the many static pieces into one mesh per material: far fewer draw calls, smoother frames */
+function mergeGeos(geos){let nV=0,nI=0;for(const g of geos){if(!g.index)g.setIndex([...Array(g.attributes.position.count).keys()]);nV+=g.attributes.position.count;nI+=g.index.count;}
+  const pos=new Float32Array(nV*3),nor=new Float32Array(nV*3),uv=new Float32Array(nV*2),idx=new Uint32Array(nI);let vo=0,io=0;
+  for(const g of geos){pos.set(g.attributes.position.array,vo*3);nor.set(g.attributes.normal.array,vo*3);if(g.attributes.uv)uv.set(g.attributes.uv.array,vo*2);
+    const ia=g.index.array;for(let i=0;i<ia.length;i++)idx[io+i]=ia[i]+vo;vo+=g.attributes.position.count;io+=ia.length;}
+  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));out.setAttribute("normal",new THREE.BufferAttribute(nor,3));
+  out.setAttribute("uv",new THREE.BufferAttribute(uv,2));out.setIndex(new THREE.BufferAttribute(idx,1));return out;}
+function mergeStatic(group){const byMat=new Map();
+  for(const c of [...group.children]){if(c.isMesh&&!c.isInstancedMesh&&c.children.length===0){c.updateMatrix();const g=c.geometry.clone();g.applyMatrix4(c.matrix);
+    if(!byMat.has(c.material))byMat.set(c.material,[]);byMat.get(c.material).push(g);group.remove(c);}}
+  for(const [mat,geos] of byMat){const m=new THREE.Mesh(mergeGeos(geos),mat);m.castShadow=m.receiveShadow=true;group.add(m);}}
+mergeStatic(cage); mergeStatic(door);
 /* soft contact shadow under his feet */
 const shadowTex=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");const gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,"rgba(0,0,0,.4)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
 const shadow=new THREE.Mesh(new THREE.PlaneGeometry(36,24),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));
@@ -374,20 +386,24 @@ const clamp01=x=>Math.min(1,Math.max(0,x));
 const ease=x=>{x=clamp01(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
 const easeOut=x=>{x=clamp01(x);return 1-Math.pow(1-x,3);};
 const smooth=x=>{x=clamp01(x);return x*x*(3-2*x);};
+const smoother=x=>{x=clamp01(x);return x*x*x*(x*(6*x-15)+10);};
 const seg=(t,a,b)=>ease((t-a)/(b-a));
 const mix=(a,b,k)=>a+(b-a)*k;
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 const polar=(r,a,y=0)=>V3(r*Math.sin(a),y,r*Math.cos(a));
 const leftOf=y=>V3(Math.cos(y),0,-Math.sin(y)), fwdOf=y=>V3(Math.sin(y),0,Math.cos(y));
 
-/* smooth curve through keyframes (Hermite / Catmull-Rom), so the body never stops dead between poses */
+/* smooth curve through keyframes (monotone Hermite, so values never overshoot between poses) */
 function track(keys){
-  return t=>{const n=keys.length; if(t<=keys[0][0])return keys[0].slice(1); if(t>=keys[n-1][0])return keys[n-1].slice(1);
+  const n=keys.length, m=keys[0].length;
+  const tan=keys.map((k,i)=>{const out=[];for(let j=1;j<m;j++){
+    if(i===0||i===n-1){out.push(0);continue;}
+    const d0=(k[j]-keys[i-1][j])/(k[0]-keys[i-1][0]), d1=(keys[i+1][j]-k[j])/(keys[i+1][0]-k[0]);
+    out.push(d0*d1<=0?0:2/(1/d0+1/d1));}return out;});
+  return t=>{if(t<=keys[0][0])return keys[0].slice(1); if(t>=keys[n-1][0])return keys[n-1].slice(1);
     let i=0; while(t>keys[i+1][0])i++;
-    const k0=keys[Math.max(0,i-1)],k1=keys[i],k2=keys[i+1],k3=keys[Math.min(n-1,i+2)], dt=k2[0]-k1[0], u=(t-k1[0])/dt, u2=u*u,u3=u2*u;
-    const out=[];for(let j=1;j<k1.length;j++){
-      const m1=(k2[j]-k0[j])/((k2[0]-k0[0])||1)*dt, m2=(k3[j]-k1[j])/((k3[0]-k1[0])||1)*dt;
-      out.push((2*u3-3*u2+1)*k1[j]+(u3-2*u2+u)*m1+(-2*u3+3*u2)*k2[j]+(u3-u2)*m2);}
+    const k1=keys[i],k2=keys[i+1], dt=k2[0]-k1[0], u=(t-k1[0])/dt, u2=u*u,u3=u2*u;
+    const out=[];for(let j=1;j<m;j++)out.push((2*u3-3*u2+1)*k1[j]+(u3-2*u2+u)*tan[i][j-1]*dt+(-2*u3+3*u2)*k2[j]+(u3-u2)*tan[i+1][j-1]*dt);
     return out;};
 }
 
@@ -395,95 +411,128 @@ function track(keys){
 const DC=DOOR, OUT=DC+Math.PI;
 // body: [t, root r, root angle, hips height, facing, spine bend, lean back, head nod, head turn]
 const body=track([
-  [-1,  40,.30,74,.30, .02,  0,  -.05,0],
-  [0,   40,.30,74,.30, .02,  0,  -.05,0],
-  [.55, 40,.31,73.5,.33,.03, 0,  -.1,.85],   // looks right, toward the door
-  [.95, 42,.50,73,.55, .06,  0,  -.05,.6],   // leans in and pushes the door open
-  [1.45,34,.90,66,1.0, .15,  0,   0,.2],     // steps toward the doorway
-  [1.9, 36,1.18,48,1.20,.50, 0,  .28,0],     // crouches low before reaching the door
-  [2.4, 58,1.20,46,1.20,.55, 0,  .30,0],     // duck-walks under the top of the door
-  [2.65,78,1.20,47,1.55,.42,-.02,.15,-.15],  // half out, still low
-  [2.95,94,1.20,42,3.3, .2,-.12,.05,-.3],   // outside: turns while staying low
-  [3.25,94,1.20,58,OUT-.25,.06,-.17,0,-.1],  // facing the cage, leans back and rises
-  [3.6, 93,1.20,72,OUT, .03,-.13,-.05,0],    // heels over the edge
-  [4.3, 92,1.20,74,OUT, .02,-.11,-.28,0],    // ready; glances up at the sky
-  [4.9, 92,1.20,62,OUT, .08,-.17,-.05,0],    // bends his knees
-  [5.15,92,1.20,69,OUT, .02,-.30, .1,0],     // drives through his legs
-  [5.3, 92,1.20,76,OUT,-.06,-.42, .2,0]]);   // legs extended: he lets go
-const T_PUSH=4.95;
+  [-1,  24,.30,10,.30, .08,  0,   .06,0],     // sitting cross-legged on the cage floor
+  [0,   24,.30,10,.30, .08,  0,   .06,0],
+  [.6,  24,.30,10,.32, .10,  0,  -.04,.75],   // looks toward the door
+  [1.35,27,.30,15,.30, .48,  0,   .12,.25],   // leans forward, feet come under him
+  [1.95,33,.30,42,.30, .42,  0,   .10,0],     // pushes up through his legs
+  [2.55,40,.30,73.5,.32,.05, 0,  -.05,.3],    // standing
+  [2.95,42,.50,73,.55, .06,  0,  -.05,.6],    // leans in and pushes the door open
+  [3.45,34,.90,66,1.0, .15,  0,   0,.2],      // steps toward the doorway
+  [3.9, 36,1.18,48,1.20,.50, 0,   .28,0],     // crouches low before reaching the door
+  [4.4, 58,1.20,46,1.20,.55, 0,   .30,0],     // duck-walks under the top of the door
+  [4.75,78,1.20,47,1.55,.42,-.02, .15,-.15],  // half out, still low
+  [5.45,94,1.20,42,3.3, .20,-.12, .05,-.3],   // turns slowly while staying low
+  [5.95,94,1.20,58,OUT-.25,.06,-.17,0,-.1],   // facing the cage, leans back and rises
+  [6.4, 93,1.20,72,OUT, .03,-.13,-.05,0],     // heels over the edge
+  [7.1, 92,1.20,74,OUT, .02,-.11,-.28,0],     // glances up at the sky
+  [8.0, 92,1.20,74,OUT, .00,-.34, .10,0],     // leans back until his arms are straight
+  [8.2, 92,1.20,74,OUT,-.02,-.40, .16,0]]);   // lets go
+const T_STAND=2.55, T_LET=8.2;
 
-/* footsteps: each foot stays planted until it steps; [start, land, position, facing] */
-function bodyAt(t){const [r,a,hy,yaw,spX,tip,hdX,hdY]=body(t);return {root:polar(r,a,FLOOR),hy,yaw,spX,tip,hdX,hdY};}
+/* after he lets go he tips backwards around his heels like a falling plank, then leaves the rim */
+const PIV=(()=>{let th=-.40,w=-.32;const c=1.5,dt=1/240,tab=[[0,th,w]];
+  for(let t=dt;t<4;t+=dt){w+=c*Math.sin(th)*dt;th+=w*dt;tab.push([t,th,w]);if(th<-1.02)break;}
+  return tab;})();
+const T_PIVOT=PIV[PIV.length-1][0];
+function pivotAt(u){const i=Math.min(PIV.length-1,Math.max(0,Math.round(u*240)));return PIV[i];}
+T_RELEASE=T_LET+T_PIVOT;
+
+function bodyAt(t){
+  if(t>T_LET){const b=bodyAt(T_LET),[,th,w]=pivotAt(t-T_LET);b.tip=th;b.spX=-.05;b.hdX=.22;return b;}
+  const [r,a,hy,yaw,spX,tip,hdX,hdY]=body(t);return {root:polar(r,a,FLOOR),hy,yaw,spX,tip,hdX,hdY};}
 function footFromBody(t,side,fwd){const b=bodyAt(t);return {p:b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),fwd*FIG_S),yaw:b.yaw};}
+
+/* feet: crossed while sitting, then planted footsteps */
+function bodyPoint(b,x,y,z){return b.root.clone().addScaledVector(leftOf(b.yaw),x*FIG_S).addScaledVector(fwdOf(b.yaw),z*FIG_S).setY(FLOOR+y*FIG_S);}
+function sittingFoot(t,side){            // ankles crossed in front, sliding back under him as he gets up
+  const b=bodyAt(Math.max(0,Math.min(t,T_STAND)));
+  const kk=smoother((t-.65)/.75);
+  const cross=bodyPoint(b,-6.5*side,3,side>0?17:11), under=bodyPoint(b,8.5*side,0,2);
+  const p=cross.lerp(under,kk); p.y+=4*Math.sin(Math.PI*kk)*FIG_S;
+  return {p,yaw:mix(b.yaw-1.15*side,b.yaw,kk),cross:1-kk};}
 const STEPS={
-  L:[{t:-1,...footFromBody(0,1,2)},{a:1.0,t:1.4,...footFromBody(1.5,1,4)},{a:1.9,t:2.3,...footFromBody(2.45,1,6)},
-     {a:2.55,t:2.95,p:polar(89,DC+.03,FLOOR),yaw:1.9},{a:3.1,t:3.45,p:polar(91,DC-.11,FLOOR),yaw:OUT}],
-  R:[{t:-1,...footFromBody(0,-1,2)},{a:1.4,t:1.85,...footFromBody(1.95,-1,4)},{a:2.3,t:2.7,p:polar(87,DC-.08,FLOOR),yaw:1.4},
-     {a:2.95,t:3.35,p:polar(91,DC+.11,FLOOR),yaw:OUT-.2},{a:3.45,t:3.6,p:polar(91,DC+.11,FLOOR),yaw:OUT}]};
+  L:[{t:-1,...footFromBody(T_STAND,1,2)},{a:3.0,t:3.4,...footFromBody(3.5,1,4)},{a:3.9,t:4.3,...footFromBody(4.45,1,6)},
+     {a:4.6,t:5.05,p:polar(89,DC+.03,FLOOR),yaw:1.9},{a:5.55,t:5.95,p:polar(91,DC-.11,FLOOR),yaw:OUT}],
+  R:[{t:-1,...footFromBody(T_STAND,-1,2)},{a:3.4,t:3.85,...footFromBody(3.95,-1,4)},{a:4.3,t:4.7,p:polar(87,DC-.08,FLOOR),yaw:1.4},
+     {a:5.1,t:5.55,p:polar(91,DC+.11,FLOOR),yaw:OUT-.2},{a:5.95,t:6.15,p:polar(91,DC+.11,FLOOR),yaw:OUT}]};
 function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
-  if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw,lift:0};
-  const k=smooth((t-nx.a)/(nx.t-nx.a));
-  if(k>=1)return {p:nx.p.clone(),yaw:nx.yaw,lift:0};
+  if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw};
+  const k=smoother((t-nx.a)/(nx.t-nx.a));
+  if(k>=1)return {p:nx.p.clone(),yaw:nx.yaw};
   const p=cur.p.clone().lerp(nx.p,k); p.y+=8*Math.sin(Math.PI*k);
-  return {p,yaw:mix(cur.yaw,nx.yaw,k),lift:Math.sin(Math.PI*k)};}
+  return {p,yaw:mix(cur.yaw,nx.yaw,k)};}
 
-/* hands: where each hand grips, and when it moves to the next grip */
+/* hands: on his knees while sitting, then the door, the door frame and the bars */
 const nearestBar=a=>off+Math.round((a-off)/S)*S;
 const DOOR_BAR=DOOR-.5*S;
-function doorAngleAt(t){if(t===null||t<.75)return 0;const u=t-.75;return 1.7*smooth(u/.95)+.05*Math.exp(-2*Math.max(0,u-.95))*Math.sin(Math.max(0,u-.95)*7);}
-function doorBarAt(t,y){const a=openSign*doorAngleAt(t);const p=polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);return p;}
-const idleBody=bodyAt(0);
+function doorAngleAt(t){if(t===null||t<2.75)return 0;const u=t-2.75;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
+function doorBarAt(t,y){const a=openSign*doorAngleAt(t);return polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);}
+const _kp=new THREE.Vector3();
+function kneeHand(leg){return ()=>{leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;return _kp.clone();};}
 function relaxedHand(side){return t=>{const b=bodyAt(Math.max(0,t));return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};}
-const GRIP={
-  L:[{t:-1,p:()=>polar(R,nearestBar(.52),118)},
-     {a:.45,t:.75,p:t=>doorBarAt(t,112)},           // pushes the door open
-     {a:1.15,t:1.55,p:relaxedHand(1)},
-     {a:1.95,t:2.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)},   // grabs the top of the door
-     {a:2.85,t:3.3,p:()=>polar(R,hingeA,112)},
-     {a:5.18,t:1e9,p:null}],
-  R:[{t:-1,p:()=>polar(R,nearestBar(.08),118)},
-     {a:1.2,t:1.6,p:relaxedHand(-1)},
-     {a:1.95,t:2.35,p:()=>polar(R,hingeA,96)},
-     {a:2.6,t:3.1,p:()=>polar(R,freeA,112)},
-     {a:5.18,t:1e9,p:null}]};
+let GRIP=null;
+function buildGrips(){GRIP={
+  L:[{t:-1,p:kneeHand(L.leg)},
+     {a:1.85,t:2.45,p:relaxedHand(1)},
+     {a:2.45,t:2.75,p:t=>doorBarAt(t,112)},             // pushes the door open
+     {a:3.15,t:3.55,p:relaxedHand(1)},
+     {a:3.95,t:4.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
+     {a:5.2,t:5.7,p:()=>polar(R,hingeA,112)},
+     {a:T_LET,t:1e9,p:null}],
+  R:[{t:-1,p:kneeHand(Rt.leg)},
+     {a:1.85,t:2.45,p:relaxedHand(-1)},
+     {a:3.95,t:4.35,p:()=>polar(R,hingeA,96)},
+     {a:4.95,t:5.5,p:()=>polar(R,freeA,112)},
+     {a:T_LET,t:1e9,p:null}]};}
 function handAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
   const at=(g,tt)=>g.p?g.p(tt):null;
   if(!nx||t<nx.a)return at(cur,t);
   if(!nx.p)return null;
-  const k=ease((t-nx.a)/(nx.t-nx.a)), p0=at(cur,nx.a), p1=at(nx,t);
-  if(k>=1)return at(nx,t);
+  const k=smoother((t-nx.a)/(nx.t-nx.a)), p0=at(cur,nx.a), p1=at(nx,t);
+  if(k>=1)return p1;
   const p=p0.clone().lerp(p1,k); p.y+=6*Math.sin(Math.PI*k);
-  // pull the moving hand slightly toward the body so it never passes through bars
   const r=Math.hypot(p.x,p.z), rr=r-5*Math.sin(Math.PI*k); p.x*=rr/r; p.z*=rr/r;
   return p;}
 
 /* ---------- two-bone limb solver: puts a hand or foot exactly on its target ---------- */
 const _t=new THREE.Vector3(),_p=new THREE.Vector3(),_u=new THREE.Vector3(),_w=new THREE.Vector3(),_x=new THREE.Vector3(),_y=new THREE.Vector3(),_z=new THREE.Vector3(),_m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_qp=new THREE.Quaternion();
+const clampm1=x=>Math.min(1,Math.max(-1,x));
 function solveLimb(upper,lower,L1,L2,targetW,poleW,bend){
   const par=upper.parent; par.updateMatrixWorld(true);
   _t.copy(targetW); par.worldToLocal(_t); _t.sub(upper.position);
   _p.copy(poleW); par.worldToLocal(_p); _p.sub(upper.position);
   let d=_t.length(); d=Math.min(Math.max(d,Math.abs(L1-L2)+.01),L1+L2-.01);
   const td=_t.normalize();
-  const ca=clamp01x((L1*L1+d*d-L2*L2)/(2*L1*d)), sa=Math.sqrt(1-ca*ca);
+  const ca=clampm1((L1*L1+d*d-L2*L2)/(2*L1*d)), sa=Math.sqrt(1-ca*ca);
   const b=_p.clone().addScaledVector(td,-_p.dot(td)); if(b.lengthSq()<1e-6)b.set(0,-1,0); b.normalize();
-  _u.copy(td).multiplyScalar(ca).addScaledVector(b,sa);                 // upper bone direction
-  _w.copy(td).multiplyScalar(d).addScaledVector(_u,-L1).normalize();   // lower bone direction
+  _u.copy(td).multiplyScalar(ca).addScaledVector(b,sa);
+  _w.copy(td).multiplyScalar(d).addScaledVector(_u,-L1).normalize();
   _y.copy(_u).negate();
   _z.copy(_w).addScaledVector(_u,-_w.dot(_u)); if(_z.lengthSq()<1e-8)_z.copy(b); _z.normalize(); if(bend>0)_z.negate();
   _x.crossVectors(_y,_z).normalize(); _z.crossVectors(_x,_y);
   _m.makeBasis(_x,_y,_z); upper.quaternion.setFromRotationMatrix(_m);
   const ci=clampm1((L1*L1+L2*L2-d*d)/(2*L1*L2)); lower.quaternion.setFromEuler(new THREE.Euler(bend*(Math.PI-Math.acos(ci)),0,0));
 }
-const clamp01x=x=>Math.min(1,Math.max(-1,x)), clampm1=clamp01x;
 const ARM1=26, ARM2=27.7, LEG1=THIGH, LEG2=SHIN, ANKLE_H=5.3;
-
-function setFlatFoot(leg,yaw){       // keep the shoe flat on the rim, pointing where he steps
+function setFlatFoot(leg,yaw,pitch=0){
   leg.a.parent.updateMatrixWorld(true);
-  cage.getWorldQuaternion(_q); _q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),yaw));
+  cage.getWorldQuaternion(_q); _q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),yaw)); if(pitch)_q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),pitch));
   leg.a.parent.getWorldQuaternion(_qp); leg.a.quaternion.copy(_qp.invert().multiply(_q));}
+
+/* arms after he lets go: open and reach toward the sky as he tips back */
+const ARMS_FALL={l:[-1.5,.42,-.25],r:[-1.42,-.4,-.32]};
+const _e=new THREE.Euler(), _qq=new THREE.Quaternion();
+let armCap=null;
+function armsFree(u,on){
+  const a1=Math.sin(u*1.7),a2=Math.sin(u*1.7+2.1);
+  const fk=[[ARMS_FALL.l[0]+.18*a1*on,0,ARMS_FALL.l[1]+.07*a2*on],[ARMS_FALL.l[2]-.15*Math.max(0,a1)*on,0,0],
+            [ARMS_FALL.r[0]+.18*a2*on,0,ARMS_FALL.r[1]-.07*a1*on],[ARMS_FALL.r[2]-.15*Math.max(0,a2)*on,0,0]];
+  const k=smoother(u/.9);
+  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].forEach((o,i)=>{_qq.setFromEuler(_e.set(...fk[i]));o.quaternion.copy(armCap[i]).slerp(_qq,k);});
+  L.arm.w.rotation.set(.1,0,0); Rt.arm.w.rotation.set(.1,0,0);}
 
 /* ---------- apply a pose while he is on the cage ---------- */
 let leanNow=0;
@@ -491,67 +540,85 @@ function poseOnCage(t,clock){
   const b=bodyAt(t<0?0:t);
   const br=Math.sin(clock*1.3);
   fig.position.copy(b.root); fig.rotation.set(0,0,0); fig.rotateY(b.yaw); fig.rotateX(b.tip);
-  hips.position.y=b.hy+(t<0?.4*br:0);
-  spine.rotation.set(b.spX+.012*br,0,0);
-  let hdX=b.hdX,hdY=b.hdY; if(t<0){hdY=.35*Math.sin(clock*.23)*Math.max(0,Math.sin(clock*.11)); hdX=-.06+.04*Math.sin(clock*.17);}
+  hips.position.y=b.hy+(t<.6?.3*br:0);
+  spine.rotation.set(b.spX+(t<.6?.015*br:0),0,0);
+  let hdX=b.hdX,hdY=b.hdY; if(t<0){hdY=.3*Math.sin(clock*.23)*Math.max(0,Math.sin(clock*.11)); hdX=.04+.05*Math.sin(clock*.17);}
   head.rotation.set(hdX,hdY,0);
   leanNow=b.tip;
   fig.updateMatrixWorld(true);
   const tt=t<0?-1:t;
-  // feet
+  // feet and legs
   for(const [leg,list,side] of [[L.leg,STEPS.L,1],[Rt.leg,STEPS.R,-1]]){
-    const f=footAt(list,tt); const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
-    const pole=V3(.15*side,-.2,1).applyQuaternion(fig.quaternion).multiplyScalar(80);
+    let f,cross=0;
+    if(tt<T_STAND){const s=sittingFoot(tt<0?0:tt,side);f=s;cross=s.cross;} else f=footAt(list,tt);
+    const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
+    const poleL=V3(mix(.15,1.1,cross)*side,mix(-.2,.35,cross),mix(1,.45,cross));
+    const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
     leg.h.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
     solveLimb(leg.h,leg.k,LEG1,LEG2,cage.localToWorld(tgt),poleW,1);
-    setFlatFoot(leg,f.yaw);}
-  // hands
-  for(const [arm,list,side] of [[L.arm,GRIP.L,1],[Rt.arm,GRIP.R,-1]]){
-    const g=handAt(list,tt);
-    if(g){const pole=V3(.8*side,-1,-.35).applyQuaternion(fig.quaternion).multiplyScalar(80);
+    setFlatFoot(leg,f.yaw,cross*.5*side*0);}
+  // hands and arms
+  if(tt>=T_LET){
+    if(!armCap)armCap=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].map(o=>o.quaternion.clone());
+    armsFree(tt-T_LET,smooth((tt-T_LET)/1.2));
+  } else {
+    for(const [arm,list,side] of [[L.arm,GRIP.L,1],[Rt.arm,GRIP.R,-1]]){
+      const g=handAt(list,tt);
+      const pole=V3(.8*side,-1,-.35).applyQuaternion(fig.quaternion).multiplyScalar(80);
       arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
       solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
-    else{arm.s.rotation.set(-1.4,0,.3*side); arm.e.rotation.set(-.3,0,0);}}
+    if(tt<T_LET-.05)armCap=null;}
   return b;
 }
 
-/* ---------- the fall: a real jump. centre of mass follows a ballistic arc, he rotates backwards ---------- */
-const FALL_POSE={lSx:-1.5,lSz:.3,lE:-.95,rSx:-.75,rSz:-.25,rE:-1.65,lHx:-.18,lK:.22,rHx:-.08,rK:.14,ank:.15};
+/* ---------- the fall: centre of mass leaves the rim with the speed of his tipping, then gravity ---------- */
+const FALL_LEGS={lHx:-.16,lK:.2,rHx:-.06,rK:.12,ank:.15};
 let rel=null;
 function captureRelease(clock){
-  const sw=swayAt(T_RELEASE-1e-3,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
-  poseOnCage(T_RELEASE-1e-3,clock); fig.updateMatrixWorld(true);
+  const pelAt=tt=>{const sw=swayAt(tt,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
+    poseOnCage(tt,clock); fig.updateMatrixWorld(true); const p=new THREE.Vector3(); hips.getWorldPosition(p); stage.worldToLocal(p); return p;};
+  const dtv=1/60, pPrev=pelAt(T_RELEASE-dtv-1e-3), pel=pelAt(T_RELEASE-1e-3);
+  const vel=pel.clone().sub(pPrev).divideScalar(dtv);
   const o=massOffset(); relTilt={x:o.x,z:o.z};
-  const pel=new THREE.Vector3(); hips.getWorldPosition(pel); stage.worldToLocal(pel);
   const qs=new THREE.Quaternion(); fig.getWorldQuaternion(qs); const qstage=new THREE.Quaternion(); stage.getWorldQuaternion(qstage); qs.premultiply(qstage.invert());
   const bones=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone());
+  const w0=pivotAt(T_PIVOT)[2], tip0=pivotAt(T_PIVOT)[1];
   stage.add(fig);
-  rel={pel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x};
+  rel={pel,vel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x,w0,tip0};
 }
-const _e=new THREE.Euler(), _qq=new THREE.Quaternion();
 function poseFalling(u){
-  // backward rotation: starts at his push speed, air slows it as he settles face-up
-  const w0=-1.15,kd=.9, dTip=(w0/kd)*(1-Math.exp(-kd*u));
-  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,0,.08*Math.sin(u*.6)*smooth(u))));
+  // keeps rotating backwards; air resistance settles him lying face-up
+  const target=-1.62, kd=Math.max(.6,rel.w0/(target-rel.tip0)), dTip=(rel.w0/kd)*(1-Math.exp(-kd*u));
+  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,0,.07*Math.sin(u*.6)*smooth(u))));
   fig.quaternion.copy(q);
   hips.position.y=rel.hy;
-  // centre of mass: launch speed outward and slightly up, gravity down, air drag on the sideways drift
-  const vOut=62,vUp=20,g=46,ka=.75;
-  const out=vOut/ka*(1-Math.exp(-ka*u)), up=vUp*u-.5*g*u*u;
-  const dir=V3(Math.sin(DC),0,Math.cos(DC));
-  const pel=rel.pel.clone().addScaledVector(dir,out); pel.y+=up;
-  const off=V3(0,rel.hy*FIG_S,0).applyQuaternion(q);
-  fig.position.copy(pel).sub(off);
-  spine.rotation.set(mix(rel.spX,-.1,smooth(u/1.2)),0,0); head.rotation.set(mix(rel.hdX,-.2,smooth(u/1.5)),.08*Math.sin(u*.9),0);
-  // limbs: ease from where they were into a loose, drifting fall pose
-  const k=smooth(u/.7), on=smooth(u/.9);
+  const g=46, ka=.7;
+  const pel=rel.pel.clone();
+  pel.x+=rel.vel.x/ka*(1-Math.exp(-ka*u)); pel.z+=rel.vel.z/ka*(1-Math.exp(-ka*u));
+  pel.y+=rel.vel.y*u-.5*g*u*u;
+  fig.position.copy(pel).sub(V3(0,rel.hy*FIG_S,0).applyQuaternion(q));
+  spine.rotation.set(mix(rel.spX,-.08,smooth(u/1.2)),0,0); head.rotation.set(mix(rel.hdX,-.15,smooth(u/1.5)),.08*Math.sin(u*.9),0);
+  const k=smoother(u/.8), on=smooth(u/1.0);
   const a1=Math.sin(u*1.7),a2=Math.sin(u*1.7+2.1),l1=Math.sin(u*1.3+.6),l2=Math.sin(u*1.3+2.8);
-  const P=FALL_POSE;
-  const fk=[[P.lSx+.22*a1*on,0,P.lSz+.08*a2*on],[P.lE-.18*Math.max(0,a1)*on,0,0],[P.rSx+.22*a2*on,0,P.rSz-.08*a1*on],[P.rE-.18*Math.max(0,a2)*on,0,0],
-    [P.lHx+.16*l1*on,0,.03],[P.lK+.15*Math.max(0,l1)*on,0,0],[P.ank,0,0],[P.rHx+.16*l2*on,0,-.03],[P.rK+.15*Math.max(0,l2)*on,0,0],[P.ank,0,0]];
+  const P=FALL_LEGS, uu=u+T_PIVOT;
+  armsFree(uu,smooth(uu/1.2));
+  const fk=[null,null,null,null,
+    [P.lHx+.14*l1*on,0,.03],[P.lK+.13*Math.max(0,l1)*on,0,0],[P.ank,0,0],[P.rHx+.14*l2*on,0,-.03],[P.rK+.13*Math.max(0,l2)*on,0,0],[P.ank,0,0]];
   [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{
-    _qq.setFromEuler(_e.set(...fk[i])); o.quaternion.copy(rel.bones[i]).slerp(_qq,k);});
+    if(i<4)return; _qq.setFromEuler(_e.set(...fk[i])); o.quaternion.copy(rel.bones[i]).slerp(_qq,k);});
 }
+
+/* ---------- gentle smoothing so every joint moves fluidly between frames ---------- */
+const SMOOTH_PARTS=()=>[fig,hips,spine,head,L.arm.s,L.arm.e,L.arm.w,Rt.arm.s,Rt.arm.e,Rt.arm.w,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a];
+let smoothState=null;
+function smoothPose(dt){
+  const parts=SMOOTH_PARTS();
+  if(!smoothState||smoothState.parent!==fig.parent||dt<=0||dt>.25){smoothState={parent:fig.parent,q:parts.map(o=>o.quaternion.clone()),p:parts.map(o=>o.position.clone())};return;}
+  const a=1-Math.exp(-dt/.045);
+  parts.forEach((o,i)=>{smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
+}
+
+buildGrips();
 
 /* ---------- layout: map plate pixels to screen and world ---------- */
 let W=1,H=1,unit=1;
@@ -578,15 +645,13 @@ function layout(){
 }
 
 /* ---------- timeline ---------- */
-let t0=null, released=false, relTilt={x:0,z:0};
+let t0=null, released=false, relTilt={x:0,z:0}, lastNow=null;
 function massOffset(){            // his weight pulls the cage a little toward where he stands and leans
   const r=Math.hypot(fig.position.x,fig.position.z)+1e-6, ext=r+55*Math.max(0,Math.sin(-leanNow));
   const k=8e-6; return {x:k*fig.position.z/r*ext, z:-k*fig.position.x/r*ext};}
-function pushImpulse(t){if(t===null||t<T_PUSH)return 0;const u=t-T_PUSH;return Math.exp(-.55*u)*Math.sin(1.6*u);}   // his legs push the cage away
 function swayAt(t,clock){
   let rx=.0011*Math.sin(clock*.53), rz=.0016*Math.sin(clock*.41+1);
   if(t===null) return {rx,rz};
-  const I=.0017*pushImpulse(t); rx+=I*Math.cos(DC); rz-=I*Math.sin(DC);
   if(t<T_RELEASE){const o=massOffset(); return {rx:rx+o.x, rz:rz+o.z};}
   const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
   return {rx:rx+relTilt.x*d, rz:rz+relTilt.z*d};
@@ -606,6 +671,8 @@ function frame(now){
     const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
     poseFalling(t-T_RELEASE); shadow.visible=false;
   }
+  const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
+  if(!window.__manual) smoothPose(dt);
   renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera);
 }
 
@@ -626,7 +693,7 @@ new ResizeObserver(()=>layout()).observe(stageEl);
 document.getElementById("letgo").addEventListener("click",()=>{
   stageEl.classList.add("played");
   const now=performance.now();
-  t0=reduce?now-30000:now; released=false; cage.add(fig);
+  t0=reduce?now-30000:now; released=false; cage.add(fig); armCap=null; rel=null; smoothState=null;
 });
 </script>
 

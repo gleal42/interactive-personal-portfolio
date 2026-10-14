@@ -1,8 +1,9 @@
 # GL — personal homepage
 
 A single-page site built around one image: a man in a birdcage hanging in the sky.
-Click **let go** and he pushes the door open, crouches through, turns on the edge of the
-cage, and leaps backwards into the clouds.
+He sits cross-legged on the floor of the cage. Click **let go** and he stands up, pushes the
+door open, crouches through, turns on the edge of the cage, leans back on straight arms,
+lets go, and falls backwards into the clouds.
 
 > *Sometimes you have to let go of the life you planned to find the life that's waiting for you.*
 > (often attributed to Joseph Campbell)
@@ -12,7 +13,8 @@ cage, and leaps backwards into the clouds.
 - **Clouds** are a real photo (`assets/plate.jpg`), cleaned of the original cage, ladder and watermark.
 - **Cage, chain, ladder and the man** are drawn live in 3D with [three.js](https://threejs.org) (r160, loaded from jsDelivr).
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
-- **Motion**: hands and feet are placed on real points (bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. The jump is a ballistic arc with backward rotation, and the cage recoils from the push.
+- **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
+- **The fall** is simulated: he tips backwards around his heels under gravity, leaves the rim with that speed, then follows a ballistic arc while air resistance settles him face-up. The cage leans toward his weight and swings back when he's gone.
 - The layout adapts to phones: the quote sits above, and the cage is bigger and kept clear of the text.
 
 ## Run locally
@@ -50,7 +52,7 @@ Most things are a single constant near the top of the script in `index.html`:
 | Cage position on the photo | `ANCHOR` |
 | Man's size | `FIG_S` |
 | Bar thickness | `THICK` |
-| Timing of the sequence | the `body` keyframes and `T_RELEASE` |
+| Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
 
 ## Note on privacy
 
