@@ -645,15 +645,19 @@ buildGrips();
 const RUNG=26, HANDLE_TOP=FLOOR+2*RUNG;           // rungs every 26 units, two above the floor as handles
 const rungY=y=>FLOOR-RUNG*Math.round((FLOOR-y)/RUNG);
 const CLIMB_P=.9, CLIMB_V=2*RUNG/CLIMB_P;         // one full cycle climbs two rungs
-let climbStart=-900;                              // set from the screen size, so he climbs into view
-function climbY(t){const y=climbStart+CLIMB_V*t;return y<FLOOR-30?y:FLOOR-30*Math.exp(-(y-(FLOOR-30))/30);}
-const climbEnd=()=>(FLOOR-climbStart)/CLIMB_V+1.3;
-// each limb moves once per cycle, opposite hand and foot together
+let climbStart=FLOOR-2*RUNG*18;                   // set from the screen size, so he climbs into view (whole cycles)
+// the gait follows how far he has climbed: on the last cycle body, arms and legs slow down together and stop
+const tauEnd=()=>(FLOOR-climbStart)/CLIMB_V;
+function tauOf(t){const t0=tauEnd()-CLIMB_P;if(t<=t0)return t;const u=Math.min(1,(t-t0)/(2*CLIMB_P));return t0+CLIMB_P*(1-(1-u)*(1-u));}
+const yLin=tau=>climbStart+CLIMB_V*tau;
+const climbY=t=>yLin(tauOf(t));
+const climbEnd=()=>tauEnd()+CLIMB_P+.35;
 // like the reference: left hand and left foot move up together, then the right pair half a cycle later.
 // each limb moves two rungs, so the hands always hold different rungs, leapfrogging each other
 const LIMBS={LH:{ph:0,off:150,max:HANDLE_TOP,x:-12,per:1,win:.42},LF:{ph:0,off:12,max:FLOOR,x:-9,per:1,win:.42},
              RH:{ph:.5,off:150,max:HANDLE_TOP,x:12,per:1,win:.42},RF:{ph:.5,off:12,max:FLOOR,x:9,per:1,win:.42}};
-function limbRungAt(L_,m){const Pl=CLIMB_P*L_.per,te=L_.ph*CLIMB_P+(m+L_.win)*Pl;return Math.min(L_.max,rungY(climbY(te)+L_.off));}
+function limbRungAt(L_,m){const Pl=CLIMB_P*L_.per,te=L_.ph*CLIMB_P+(m+L_.win)*Pl;return Math.min(L_.max,rungY(yLin(te)+L_.off));}
+const climbEndLimb=name=>limbOnLadder(name,tauEnd()-1e-4);
 function limbOnLadder(name,t){
   const L_=LIMBS[name], Pl=CLIMB_P*L_.per, n=Math.floor((t-L_.ph*CLIMB_P)/Pl), s=L_.ph*CLIMB_P+n*Pl, e=s+L_.win*Pl;
   const prev=limbRungAt(L_,n-1), cur=limbRungAt(L_,n);
@@ -674,7 +678,7 @@ const entry=track([
 const T_ENTRY=4.5, T_OFF_LADDER=1.0;
 function entryBody(tb){const [x,z,yaw,hy,spX,tip,hdX,hdY]=entry(tb);return {root:V3(x,FLOOR,z),hy,yaw,spX,tip,hdX,hdY};}
 function entryFoot(tb,side){             // planted steps off the ladder and around, then crossing his legs
-  const rungFoot=V3(-side*9,FLOOR,6), back=V3(-side*9,FLOOR,36);
+  const rungFoot=V3(-side*9,climbEndLimb(side>0?"LF":"RF").y,6), back=V3(-side*9,FLOOR,36);   // starts where the climb left each foot
   const under=(tt,f=2)=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),f*FIG_S);};
   const steps=side<0?[[.05,.55,rungFoot,back,Math.PI,Math.PI],[1.3,1.75,back,under(1.9),Math.PI,1.6],[2.2,2.6,under(1.9),under(2.6),1.6,.3]]
                     :[[.6,1.1,rungFoot,back,Math.PI,Math.PI],[1.7,2.15,back,under(2.3),Math.PI,1.0],[2.45,2.8,under(2.3),under(2.6),1.0,.3]];
@@ -685,7 +689,7 @@ function entryFoot(tb,side){             // planted steps off the ladder and aro
   if(kk>0){const b=entryBody(T_ENTRY);const cross=bodyPoint(b,-6.5*side,3,side>0?17:11);p=p.clone().lerp(cross,kk);p.y+=4*Math.sin(Math.PI*kk)*FIG_S;yaw=mix(yaw,b.yaw-1.15*side,kk);}
   return {p,yaw,cross:kk};}
 function entryHand(tb,arm,side){
-  const handle=V3(-side*12,HANDLE_TOP,2);
+  const handle=V3(-side*12,climbEndLimb(side>0?"LH":"RH").y,2);
   const relaxedAt=tt=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};
   const leave=side<0?.75:1.0;
   let p;
@@ -713,8 +717,8 @@ function applyRig(spec){                 // shared: body, then legs and arms sol
 function poseIntro(ti,clock){
   const tA=climbEnd();
   if(ti<tA){                                   // climbing, seen from behind
-    const y=climbY(ti), bob=4*Math.sin(ti/CLIMB_P*Math.PI*4-1.2);   // rises in small surges with each leg push
-    const LH=limbOnLadder("LH",ti),RH=limbOnLadder("RH",ti),LF=limbOnLadder("LF",ti),RF=limbOnLadder("RF",ti);
+    const tau=tauOf(ti), y=yLin(tau), bob=4*Math.sin(tau/CLIMB_P*Math.PI*4-1.2)*clamp01((tauEnd()-tau)/(.7*CLIMB_P));   // rises in small surges with each leg push
+    const LH=limbOnLadder("LH",tau),RH=limbOnLadder("RH",tau),LF=limbOnLadder("LF",tau),RF=limbOnLadder("RF",tau);
     const feet=[{p:V3(LIMBS.LF.x,LF.y,6+11*LF.lift),yaw:Math.PI},{p:V3(LIMBS.RF.x,RF.y,6+11*RF.lift),yaw:Math.PI}];
     feet[0].p.y+=14*LF.lift; feet[1].p.y+=14*RF.lift;   // knee comes up high on each step
     const hands=[V3(LIMBS.LH.x,LH.y+7*LH.lift,2+9*LH.lift),V3(LIMBS.RH.x,RH.y+7*RH.lift,2+9*RH.lift)];
@@ -761,7 +765,7 @@ function layout(){
   const sx=portrait?W*.65:x0+ANCHOR.x*k, sy=y0+(ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
-  if(!climbSet){const depth=(stage.position.y+Hw/2)/unit;climbStart=-Math.min(1000,depth+40);climbSet=true;}
+  if(!climbSet){const depth=(stage.position.y+Hw/2)/unit;climbStart=FLOOR-2*RUNG*Math.ceil((FLOOR+Math.min(1000,depth+40))/(2*RUNG));climbSet=true;}
   // sun shadows cover the cage
   const c=stage.position.clone().add(new THREE.Vector3(0,110*unit,0));
   sun.target.position.copy(c); sun.position.copy(c).addScaledVector(SUN_DIR,900*unit);
