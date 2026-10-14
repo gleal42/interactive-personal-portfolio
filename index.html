@@ -644,13 +644,13 @@ buildGrips();
 /* ---------- intro: he climbs the ladder, comes up through the hatch and sits down ---------- */
 const RUNG=26, HANDLE_TOP=FLOOR+2*RUNG;           // rungs every 26 units, two above the floor as handles
 const rungY=y=>FLOOR-RUNG*Math.round((FLOOR-y)/RUNG);
-const CLIMB_P=1.2, CLIMB_V=2*RUNG/CLIMB_P;        // one full cycle climbs two rungs
+const CLIMB_P=.9, CLIMB_V=2*RUNG/CLIMB_P;         // one full cycle climbs two rungs
 let climbStart=-900;                              // set from the screen size, so he climbs into view
 function climbY(t){const y=climbStart+CLIMB_V*t;return y<FLOOR-30?y:FLOOR-30*Math.exp(-(y-(FLOOR-30))/30);}
 const climbEnd=()=>(FLOOR-climbStart)/CLIMB_V+1.3;
 // each limb moves once per cycle, opposite hand and foot together
 // hands reach up one rung at a time, twice per cycle, so they stay above his head; feet step two rungs
-const LIMBS={RH:{ph:0,off:176,max:HANDLE_TOP,x:11,per:.5,win:.5},LF:{ph:.12,off:12,max:FLOOR,x:-9,per:1,win:.32},LH:{ph:.25,off:176,max:HANDLE_TOP,x:-11,per:.5,win:.5},RF:{ph:.62,off:12,max:FLOOR,x:9,per:1,win:.32}};
+const LIMBS={RH:{ph:0,off:172,max:HANDLE_TOP,x:17.5,per:.5,win:.5},LF:{ph:.12,off:12,max:FLOOR,x:-9,per:1,win:.32},LH:{ph:.25,off:172,max:HANDLE_TOP,x:-17.5,per:.5,win:.5},RF:{ph:.62,off:12,max:FLOOR,x:9,per:1,win:.32}};
 function limbRungAt(L_,m){const Pl=CLIMB_P*L_.per,te=L_.ph*CLIMB_P+(m+L_.win)*Pl;return Math.min(L_.max,rungY(climbY(te)+L_.off));}
 function limbOnLadder(name,t){
   const L_=LIMBS[name], Pl=CLIMB_P*L_.per, n=Math.floor((t-L_.ph*CLIMB_P)/Pl), s=L_.ph*CLIMB_P+n*Pl, e=s+L_.win*Pl;
@@ -711,13 +711,13 @@ function applyRig(spec){                 // shared: body, then legs and arms sol
 function poseIntro(ti,clock){
   const tA=climbEnd();
   if(ti<tA){                                   // climbing, seen from behind
-    const y=climbY(ti), bob=1.5*Math.sin(ti/CLIMB_P*Math.PI*4);
+    const y=climbY(ti), bob=4*Math.sin(ti/CLIMB_P*Math.PI*4-1.2);   // rises in small surges with each leg push
     const LH=limbOnLadder("LH",ti),RH=limbOnLadder("RH",ti),LF=limbOnLadder("LF",ti),RF=limbOnLadder("RF",ti);
-    const feet=[{p:V3(LIMBS.LF.x,LF.y,6+5*LF.lift),yaw:Math.PI},{p:V3(LIMBS.RF.x,RF.y,6+5*RF.lift),yaw:Math.PI}];
-    feet[0].p.y+=6*LF.lift; feet[1].p.y+=6*RF.lift;
+    const feet=[{p:V3(LIMBS.LF.x,LF.y,6+11*LF.lift),yaw:Math.PI},{p:V3(LIMBS.RF.x,RF.y,6+11*RF.lift),yaw:Math.PI}];
+    feet[0].p.y+=14*LF.lift; feet[1].p.y+=14*RF.lift;   // knee comes up high on each step
     const hands=[V3(LIMBS.LH.x,LH.y+7*LH.lift,2+9*LH.lift),V3(LIMBS.RH.x,RH.y+7*RH.lift,2+9*RH.lift)];
-    applyRig({root:V3(0,y+bob,15),yaw:Math.PI,tip:.06,hy:64,spX:.12,hdX:-.28+.05*Math.sin(ti*.7),hdY:.1*Math.sin(ti*.4),feet,hands,
-      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(.9*side,-1,-.4)});
+    applyRig({root:V3(0,y+bob,13.5),yaw:Math.PI,tip:.04,hy:64,spX:.08,hdX:-.28+.05*Math.sin(ti*.7),hdY:.1*Math.sin(ti*.4),feet,hands,
+      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(1.6*side,-.5,-.1)});
     return {onLadder:true};
   }
   const tb=Math.min(ti-tA,T_ENTRY), b=entryBody(tb);
