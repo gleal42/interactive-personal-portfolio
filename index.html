@@ -587,25 +587,30 @@ function captureRelease(clock){
   rel={pel,vel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x,w0,tip0};
 }
 function poseFalling(u){
-  // keeps rotating backwards; air resistance settles him lying face-up
-  const target=-1.62, kd=Math.max(.6,rel.w0/(target-rel.tip0)), dTip=(rel.w0/kd)*(1-Math.exp(-kd*u));
-  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,0,.07*Math.sin(u*.6)*smooth(u))));
+  // he keeps tumbling backwards past horizontal until he is falling head-first, slowly twisting
+  const target=-2.55, kd=Math.max(.5,rel.w0/(target-rel.tip0));
+  const dTip=(rel.w0/kd)*(1-Math.exp(-kd*u))-.1*Math.max(0,u-2.5);
+  const twist=.14*smoother(u/2.6)+.06*Math.sin(u*.7), roll=.1*smoother(u/2)+.05*Math.sin(u*.9);   // stays in profile, like the reference
+  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,twist,roll,"XYZ")));
   fig.quaternion.copy(q);
   hips.position.y=rel.hy;
-  const g=46, ka=.7;
+  const g=58, ka=.7;
   const pel=rel.pel.clone();
   pel.x+=rel.vel.x/ka*(1-Math.exp(-ka*u)); pel.z+=rel.vel.z/ka*(1-Math.exp(-ka*u));
   pel.y+=rel.vel.y*u-.5*g*u*u;
   fig.position.copy(pel).sub(V3(0,rel.hy*FIG_S,0).applyQuaternion(q));
-  spine.rotation.set(mix(rel.spX,-.08,smooth(u/1.2)),0,0); head.rotation.set(mix(rel.hdX,-.15,smooth(u/1.5)),.08*Math.sin(u*.9),0);
-  const k=smoother(u/.8), on=smooth(u/1.0);
-  const a1=Math.sin(u*1.7),a2=Math.sin(u*1.7+2.1),l1=Math.sin(u*1.3+.6),l2=Math.sin(u*1.3+2.8);
-  const P=FALL_LEGS, uu=u+T_PIVOT;
-  armsFree(uu,smooth(uu/1.2));
-  const fk=[null,null,null,null,
-    [P.lHx+.14*l1*on,0,.03],[P.lK+.13*Math.max(0,l1)*on,0,0],[P.ank,0,0],[P.rHx+.14*l2*on,0,-.03],[P.rK+.13*Math.max(0,l2)*on,0,0],[P.ank,0,0]];
-  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{
-    if(i<4)return; _qq.setFromEuler(_e.set(...fk[i])); o.quaternion.copy(rel.bones[i]).slerp(_qq,k);});
+  // back arches, head thrown back toward the ground
+  const ar=smoother(u/1.1);
+  spine.rotation.set(mix(rel.spX,-.38,ar)+.04*Math.sin(u*1.3),.05*Math.sin(u*.8),0);
+  head.rotation.set(mix(rel.hdX,-.6,smoother(u/1.3)),.12*Math.sin(u*.9),0);
+  // arms reach up behind him, legs bend and kick apart; everything drifts slowly in the wind
+  const uu=u+T_PIVOT; armsFree(uu,smooth(uu/1.2));
+  const ka2=smoother(u/1.1), kl=smoother(u/.9), on=smooth(u/1.2);
+  const a1=Math.sin(u*1.25),a2=Math.sin(u*1.1+1.9),l1=Math.sin(u*1.05+.6),l2=Math.sin(u*.95+2.6);
+  const DR={arms:[[-.55+.28*a1*on,0,.42+.12*a2*on],[-.6-.25*Math.max(0,a1)*on,0,0],[-.95+.25*a2*on,0,-.3-.1*a1*on],[-.35-.3*Math.max(0,a2)*on,0,0]],
+            legs:[[-.95+.22*l1*on,0,.12],[1.25+.2*l1*on,0,0],[.35,0,0],[-.38+.22*l2*on,0,-.1],[.75+.22*Math.max(0,l2)*on,0,0],[.35,0,0]]};
+  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].forEach((o,i)=>{_qq.setFromEuler(_e.set(...DR.arms[i]));o.quaternion.slerp(_qq,ka2);});
+  [L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{_qq.setFromEuler(_e.set(...DR.legs[i]));o.quaternion.copy(rel.bones[i+4]).slerp(_qq,kl);});
 }
 
 /* ---------- gentle smoothing so every joint moves fluidly between frames ---------- */
@@ -650,7 +655,9 @@ function massOffset(){            // his weight pulls the cage a little toward w
   const r=Math.hypot(fig.position.x,fig.position.z)+1e-6, ext=r+55*Math.max(0,Math.sin(-leanNow));
   const k=8e-6; return {x:k*fig.position.z/r*ext, z:-k*fig.position.x/r*ext};}
 function swayAt(t,clock){
-  let rx=.0011*Math.sin(clock*.53), rz=.0016*Math.sin(clock*.41+1);
+  // a slow pendulum swing from side to side, gentler once he starts moving
+  const calm=t===null?1:mix(1,.45,smooth(t/3));
+  let rx=calm*.0018*Math.sin(clock*.95*.5+1.2), rz=calm*.0062*Math.sin(clock*.95);
   if(t===null) return {rx,rz};
   if(t<T_RELEASE){const o=massOffset(); return {rx:rx+o.x, rz:rz+o.z};}
   const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
