@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,700&display=swap">
+<style>
+html,body{margin:0}
+
+/* Layout: one full-screen sky. Words on the empty teal side; a 3D golden cage hangs in the real clouds; "let go" plays the scene. Single deliberate look. */
+:root{
+  --sky:#2a5866;
+  --sky-deep:#1d414c;
+  --cloud:#f3ebe0;
+  --cloud-dim:rgba(243,235,224,.72);
+  --gold:#e0b45a;
+  --serif:"Crimson Pro","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+html{background:var(--sky)}
+body{background:var(--sky);color:var(--cloud);font-family:var(--serif);overflow-x:hidden}
+.stage{position:relative;min-height:100%;min-height:100svh;overflow:hidden;display:grid;grid-template-rows:auto 1fr;
+  background:var(--sky) url("assets/plate.jpg") 72% 50%/cover no-repeat}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .8s ease}
+#scene.ready{opacity:1}
+.stage::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.22;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(90deg,rgba(29,65,76,.5) 0%,rgba(29,65,76,.18) 36%,rgba(29,65,76,0) 52%)}
+
+nav{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:calc(22px + env(safe-area-inset-top,0px)) clamp(16px,5vw,64px) 0}
+nav a{color:var(--cloud);text-decoration:none;font-size:1.05rem;letter-spacing:.02em}
+nav a:hover{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
+nav .logo{font-size:1.9rem;letter-spacing:.06em;font-weight:400}
+nav .r{justify-self:end}
+
+.copy{position:relative;z-index:2;align-self:center;padding:0 clamp(16px,5vw,64px) 8vh;pointer-events:none}
+.copy .letgo{pointer-events:auto}
+h1{margin:0;font-weight:600;font-size:clamp(1.75rem,3.6vw,2.9rem);line-height:1.5;max-width:15em;text-wrap:balance;text-shadow:0 1px 18px rgba(20,45,52,.35)}
+h1 .line{display:block;opacity:0;transform:translateY(10px);animation:rise 1.1s cubic-bezier(.2,.7,.2,1) forwards}
+h1 .line:nth-child(2){animation-delay:.25s}
+h1 .line:nth-child(3){animation-delay:.5s}
+h1 .line:nth-child(4){animation-delay:.75s}
+@keyframes rise{to{opacity:1;transform:none}}
+
+.letgo{font:inherit;font-weight:700;font-style:italic;color:var(--cloud);background:none;border:0;padding:0 0 2px;cursor:pointer;position:relative;white-space:nowrap}
+.letgo::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--cloud);transform-origin:left;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.letgo:hover::after{transform:scaleX(.15)}
+.played .letgo::after{transform:none}
+.letgo:focus-visible{outline:2px solid var(--gold);outline-offset:6px;border-radius:2px}
+.hand{display:inline-block;width:.85em;height:.85em;margin-left:.3em;vertical-align:-.05em;animation:tap 2.4s ease-in-out infinite 1.6s}
+.played .hand{animation:none;opacity:.5}
+@keyframes tap{0%,60%,100%{transform:translate(0,0)}70%{transform:translate(-3px,-3px)}80%{transform:translate(0,0)}}
+.tallbr{display:none}
+.hint{margin-top:28px;font-size:1rem;font-style:italic;color:var(--cloud-dim);opacity:0;animation:rise 1s ease 1.4s forwards}
+.played .hint{visibility:hidden}
+
+#about{background:var(--sky-deep);padding:clamp(64px,10vw,120px) clamp(16px,5vw,64px)}
+#about .inner{max-width:38rem;display:grid;gap:18px}
+#about h2{margin:0;font-weight:600;font-size:clamp(1.8rem,3vw,2.4rem)}
+#about p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
+#about small{font-size:.95rem;color:var(--gold);font-style:italic}
+
+@media (max-aspect-ratio:1/1){
+  .stage{background-position:85% 100%;background-size:auto 66%}
+  .stage{background-color:#2e5f71}
+  .stage::after{display:none}
+  .copy{align-self:start;padding-top:4.5vh}
+  h1{font-size:clamp(1.15rem,5.2vw,1.45rem);line-height:1.45;max-width:17em}
+  .tallbr{display:inline}
+  .hint{margin-top:14px;font-size:.88rem}
+  nav{padding-top:calc(16px + env(safe-area-inset-top,0px))}
+  nav a{font-size:.95rem}
+  nav .logo{font-size:1.45rem}
+}
+@media (prefers-reduced-motion:reduce){
+  h1 .line,.hint{animation:none;opacity:1;transform:none}
+  .hand{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <canvas id="scene" aria-label="A man in a green plaid shirt stands in an old bronze birdcage hanging in the sky. When you let go, he crouches through the door, holds the bars from outside, leans back and lets go, falling backwards slowly through the clouds."></canvas>
+  <nav>
+    <a href="#top">home</a>
+    <a class="logo" href="#top" aria-label="GL, home">GL</a>
+    <a class="r" href="#about">about</a>
+  </nav>
+  <div class="copy" id="top">
+    <h1>
+      <span class="line">Sometimes you have<br class="tallbr"> to <button class="letgo" id="letgo" type="button" aria-label="let go (plays the animation)">let go</button><svg class="hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0v3.5a6 6 0 0 1-6 6h-1.2a5 5 0 0 1-3.9-1.9L4.6 15a1.5 1.5 0 0 1 2.3-1.9L9 15"/><path d="M4 4l1.5 1.5M9.5 1.5V2.5M14.5 3.5l-1 1"/></svg></span>
+      <span class="line">of the life you planned</span>
+      <span class="line">to find the life</span>
+      <span class="line">that's waiting for you</span>
+    </h1>
+    <p class="hint">Tap "let go".</p>
+  </div>
+</div>
+
+<section id="about">
+  <div class="inner">
+    <h2>about</h2>
+    <p>This is where your story goes: who you are, what you left behind, and what you're building now.</p>
+    <small>Quote often attributed to Joseph Campbell.</small>
+  </div>
+</section>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from "three";
+
+/* ---------- constants (units = pixels of the 1280x720 cloud plate) ---------- */
+const PW=1280, PH=720;
+const ANCHOR={x:1007,y:148};          // where the cage base sits on the plate
+const CAGE_SCALE_WIDE=.34, CAGE_SCALE_TALL=.62;   // smaller on wide screens, bigger on phones
+const PIVOT=3600;                    // chain pivot height above the cage base
+const R=84, STRAIGHT=150, DOME=74, NB=36, S=2*Math.PI/NB, MID=30;
+const DOOR=1.2;                      // door faces right, turned a little toward the camera
+const DOOR_TOP=147, FLOOR=8;   // the door opening reaches the top ring
+const FIG_S=1.12;               // the man, 12% bigger
+const T_RELEASE=5.3;
+
+const canvas=document.getElementById("scene"), stageEl=document.getElementById("stage");
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.AgXToneMapping;
+renderer.toneMappingExposure=1.0;
+renderer.autoClear=false;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+/* ---------- background: the real clouds, drawn with "cover" fit ---------- */
+const bgScene=new THREE.Scene(), bgCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const bgUni={tex:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},res:{value:new THREE.Vector2(1,1)}};
+bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+  uniforms:bgUni,depthTest:false,depthWrite:false,
+  vertexShader:"void main(){gl_Position=vec4(position.xy,0.,1.);}",
+  fragmentShader:`uniform sampler2D tex;uniform vec4 rect;uniform vec2 res;
+  void main(){vec2 p=vec2(gl_FragCoord.x,res.y-gl_FragCoord.y);
+    vec2 uv=(p-rect.xy)/rect.zw; vec2 cu=clamp(uv,vec2(.002,.004),vec2(.998,.998));
+    vec3 c=texture2D(tex,vec2(cu.x,1.-cu.y)).rgb;
+    float above=smoothstep(.10,-.02,uv.y);
+    if(above>0.){vec3 s=vec3(0.);
+      for(int i=-6;i<=6;i++){float fx=clamp(cu.x+float(i)*.035,.002,.998);
+        s+=texture2D(tex,vec2(fx,1.-.03)).rgb+texture2D(tex,vec2(fx,1.-.09)).rgb;}
+      s/=26.;
+      float up=clamp(-uv.y/.7,0.,1.);
+      s=mix(s,s*vec3(.78,.84,.88),up);
+      c=mix(c,s,above);}
+    vec2 q=gl_FragCoord.xy/res-.5; c*=1.-.18*dot(q,q);
+    gl_FragColor=vec4(c,1.);}`
+})));
+
+/* ---------- procedural textures ---------- */
+function canvasTex(w,h,draw,repeat=[1,1],srgb=true){const c=document.createElement("canvas");c.width=w;c.height=h;draw(c.getContext("2d"),w,h);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;}
+function noise(g,w,h,amt,alpha=.12){const d=g.getImageData(0,0,w,h);for(let i=0;i<d.data.length;i+=4){const n=(Math.random()-.5)*amt;d.data[i]+=n;d.data[i+1]+=n;d.data[i+2]+=n;}g.putImageData(d,0,0);}
+// green flannel plaid, like his shirt
+const plaid=canvasTex(256,256,(g,w,h)=>{
+  g.fillStyle="#3a4a40";g.fillRect(0,0,w,h);
+  const band=(pos,size,col,a)=>{g.globalAlpha=a;g.fillStyle=col;g.fillRect(pos,0,size,h);g.fillRect(0,pos,w,size);};
+  band(0,64,"#17251f",.6); band(128,64,"#17251f",.6);
+  band(96,10,"#7a8a82",.4); band(224,10,"#7a8a82",.4);
+  band(40,3,"#aeb5aa",.3); band(168,3,"#aeb5aa",.3);
+  band(70,22,"#526459",.35); band(198,22,"#526459",.35);
+  g.globalAlpha=1; noise(g,w,h,26);
+  g.globalAlpha=.08;g.strokeStyle="#000";for(let i=-h;i<w;i+=3){g.beginPath();g.moveTo(i,0);g.lineTo(i+h,h);g.stroke();}
+},[5,3]);
+// worn blue denim
+const denim=canvasTex(256,256,(g,w,h)=>{
+  g.fillStyle="#242c3d";g.fillRect(0,0,w,h);
+  g.globalAlpha=.22;g.strokeStyle="#56637d";for(let i=-h;i<w;i+=2){g.beginPath();g.moveTo(i,0);g.lineTo(i+h*.5,h);g.stroke();}
+  g.globalAlpha=1; noise(g,w,h,34);
+  const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,"rgba(255,255,255,0)");gr.addColorStop(.5,"rgba(120,135,165,.14)");gr.addColorStop(1,"rgba(255,255,255,0)");g.fillStyle=gr;g.fillRect(0,0,w,h);
+},[2,2]);
+// soft folds and creases for the clothes
+const folds=canvasTex(256,256,(g,w,h)=>{g.fillStyle="#808080";g.fillRect(0,0,w,h);
+  for(let i=0;i<70;i++){const x=Math.random()*w,y=Math.random()*h,l=30+Math.random()*90,a=(Math.random()-.5)*1.2;
+    g.save();g.translate(x,y);g.rotate(a);const gr=g.createLinearGradient(0,-6,0,6);gr.addColorStop(0,"rgba(0,0,0,0)");gr.addColorStop(.5,Math.random()<.5?"rgba(0,0,0,.35)":"rgba(255,255,255,.3)");gr.addColorStop(1,"rgba(0,0,0,0)");
+    g.fillStyle=gr;g.fillRect(-l/2,-6,l,12);g.restore();}
+  noise(g,w,h,16);},[2,2],false);
+// tarnished bronze for the cage
+const tarnish=canvasTex(256,256,(g,w,h)=>{
+  g.fillStyle="#6f6c66";g.fillRect(0,0,w,h);
+  for(let i=0;i<220;i++){g.globalAlpha=Math.random()*.18;g.fillStyle=Math.random()<.5?"#2b2a27":"#8d877b";
+    const x=Math.random()*w,y=Math.random()*h;g.fillRect(x,y,2+Math.random()*6,10+Math.random()*60);}
+  g.globalAlpha=1; noise(g,w,h,30);
+},[1,6]);
+const tarnishRough=canvasTex(128,128,(g,w,h)=>{g.fillStyle="#7a7a7a";g.fillRect(0,0,w,h);noise(g,w,h,90);},[1,6],false);
+
+/* ---------- materials ---------- */
+const bronze=new THREE.MeshPhysicalMaterial({color:0x6e7477,metalness:.85,roughness:.62,roughnessMap:tarnishRough,envMapIntensity:.85,clearcoat:.2,clearcoatRoughness:.3});
+const brass=new THREE.MeshPhysicalMaterial({color:0xae8a58,map:tarnish,metalness:.9,roughness:.55,roughnessMap:tarnishRough,envMapIntensity:1.0,clearcoat:.5,clearcoatRoughness:.15});
+const bronzeDark=new THREE.MeshPhysicalMaterial({color:0x8a847a,map:tarnish,metalness:.92,roughness:.58,roughnessMap:tarnishRough,envMapIntensity:.85,clearcoat:.45,clearcoatRoughness:.15});
+const iron=new THREE.MeshStandardMaterial({color:0x56544f,metalness:.9,roughness:.42,envMapIntensity:1.1});
+const shirt=new THREE.MeshStandardMaterial({map:plaid,roughness:.95,metalness:0,bumpMap:folds,bumpScale:1.4});
+const jeans=new THREE.MeshStandardMaterial({map:denim,roughness:.92,metalness:0,bumpMap:folds,bumpScale:1.2});
+const neckM=new THREE.MeshStandardMaterial({color:0x9a6a55,roughness:.75});
+const skin=new THREE.MeshPhysicalMaterial({color:0xa9785f,roughness:.62,sheen:.35,sheenColor:new THREE.Color(0xffc0a0),envMapIntensity:.5});
+const hairM=new THREE.MeshStandardMaterial({color:0x2a1d16,roughness:.85});
+const beardM=new THREE.MeshStandardMaterial({color:0x3b2a20,roughness:.95,transparent:true,opacity:.85});
+const shoeM=new THREE.MeshStandardMaterial({color:0x37373a,roughness:.75,metalness:0,bumpMap:folds,bumpScale:.6});   // dark canvas sneakers
+const soleM=new THREE.MeshStandardMaterial({color:0xd6d1c6,roughness:.8});   // white rubber soles
+const beltM=new THREE.MeshStandardMaterial({color:0x3a2a1e,roughness:.55});
+
+/* ---------- 3D scene ---------- */
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(18,1,1,20000);
+const stage=new THREE.Group(); scene.add(stage);      // scaled so 1 unit = 1 plate px
+const hang=new THREE.Group(); hang.position.y=PIVOT; stage.add(hang);
+const cage=new THREE.Group(); cage.position.y=-PIVOT; hang.add(cage);
+
+scene.add(new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9));
+scene.fog=new THREE.Fog(0x6b8f99,0,3000/0.11);   // ~20% haze toward the sky colour, like the clouds
+const sun=new THREE.DirectionalLight(0xffe2c6,2.6); scene.add(sun); scene.add(sun.target);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004;
+const SUN_DIR=new THREE.Vector3(-0.75,1.05,1.15).normalize();
+const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
+const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
+
+const add=(parent,m,cast=true,recv=true)=>{m.castShadow=cast;m.receiveShadow=recv;parent.add(m);return m;};
+const P=(a,y,r=R)=>new THREE.Vector3(r*Math.sin(a),y,r*Math.cos(a));
+const THICK=.62;   // thin bars and rings, like the reference
+function tube(points,rad,mat,seg){const c=new THREE.CatmullRomCurve3(points);const m=new THREE.Mesh(new THREE.TubeGeometry(c,seg||points.length*4,rad*THICK,14,false),mat);m.castShadow=true;m.receiveShadow=true;return m;}
+function arc(a0,a1,y,r=R,n=48){const pts=[];for(let i=0;i<=n;i++)pts.push(P(a0+(a1-a0)*i/n,y,r));return pts;}
+function ring(y,r,rad,mat){const m=new THREE.Mesh(new THREE.TorusGeometry(r,rad*THICK,14,128),mat);m.rotation.x=Math.PI/2;m.position.y=y;m.castShadow=m.receiveShadow=true;return m;}
+const BAR=2.1;
+
+/* cage: base, bars, dome, rings */
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+8,R+4,FLOOR+14,96),brass)).position.y=(FLOOR-14)/2;
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+4,R-6,6,96),brass)).position.y=-17;
+cage.add(ring(-14,R+5,3.4/THICK,brass)); cage.add(ring(-4,R+7,1.8/THICK,brass)); cage.add(ring(FLOOR,R+8,2.6/THICK,brass));
+const off=DOOR-1.5*S, doorIdx=[];
+for(let i=0;i<NB;i++){const a=off+i*S;const d=Math.atan2(Math.sin(a-DOOR),Math.cos(a-DOOR));
+  const inDoor=Math.abs(d)<2*S-1e-3; if(inDoor)doorIdx.push(a);
+  cage.add(tube([P(a,inDoor?DOOR_TOP:FLOOR),P(a,STRAIGHT)],BAR,bronze,2));
+  const dome=[];for(let k=0;k<=12;k++){const t=k/12*Math.PI/2;dome.push(P(a,STRAIGHT+DOME*Math.sin(t),R*Math.cos(t)));}
+  cage.add(tube(dome,BAR,bronze,24));}
+cage.add(ring(STRAIGHT,R,3.0,bronze));
+cage.add(ring(STRAIGHT+DOME*Math.sin(.75),R*Math.cos(.75),2.2,bronze));
+const hingeA=DOOR-2*S, freeA=DOOR+2*S;
+cage.add(tube(arc(freeA,hingeA+2*Math.PI,MID),2.6,bronze));
+cage.add(tube(arc(hingeA,freeA,DOOR_TOP+2),2.2,bronze));
+add(cage,new THREE.Mesh(new THREE.ConeGeometry(5,9,20),bronze)).position.y=STRAIGHT+DOME+3;
+add(cage,new THREE.Mesh(new THREE.TorusGeometry(14,1.6,12,48),bronze)).position.y=STRAIGHT+DOME+22;
+{const linkG=new THREE.TorusGeometry(3.2,.85,8,20);linkG.scale(1,1.6,1);
+ const y0=STRAIGHT+DOME+38, n=Math.ceil((PIVOT-y0)/8.6)+2;
+ const links=new THREE.InstancedMesh(linkG,bronze,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
+ for(let i=0;i<n;i++){e.set(0,i%2?Math.PI/2:0,0);q.setFromEuler(e);m.compose(new THREE.Vector3(0,y0+i*8.6,0),q,new THREE.Vector3(1,1,1));links.setMatrixAt(i,m);}
+ cage.add(links);}
+/* door on a hinge */
+const hingeP=P(hingeA,0);
+const door=new THREE.Group(); door.position.copy(hingeP); cage.add(door);
+for(const a of doorIdx){const p=P(a,0).sub(hingeP);door.add(tube([new THREE.Vector3(p.x,FLOOR+2,p.z),new THREE.Vector3(p.x,DOOR_TOP,p.z)],BAR,bronze,2));}
+for(const y of [FLOOR+3,MID,DOOR_TOP-2]) door.add(tube(arc(hingeA,freeA,y).map(v=>v.sub(hingeP)),y===MID?2.6:2.2,bronze));
+const openSign=(()=>{const t=new THREE.Vector3().subVectors(P(freeA,0),hingeP);const r=v=>Math.hypot(v.x+hingeP.x,v.z+hingeP.z);
+  return r(t.clone().applyAxisAngle(new THREE.Vector3(0,1,0),.2))>r(t)?1:-1;})();
+/* ladder: thin dark iron, like the original */
+{const len=4200;
+ for(const x of[-17,17]){const rail=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.1,len,8),iron);rail.position.set(x,-len/2,0);rail.castShadow=true;cage.add(rail);}
+ const n=Math.floor(len/16),rung=new THREE.CylinderGeometry(1.6,1.6,34,6);rung.rotateZ(Math.PI/2);
+ const im=new THREE.InstancedMesh(rung,iron,n),m=new THREE.Matrix4();
+ for(let i=0;i<n;i++){m.makeTranslation(0,-10-i*16,0);im.setMatrixAt(i,m);}cage.add(im);}
+/* soft contact shadow under his feet */
+const shadowTex=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");const gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,"rgba(0,0,0,.4)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const shadow=new THREE.Mesh(new THREE.PlaneGeometry(36,24),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));
+shadow.rotation.x=-Math.PI/2; shadow.position.y=FLOOR+.25; cage.add(shadow);
+
+/* ---------- the man: green plaid shirt, jeans, dark boots, short dark hair and beard ---------- */
+const THIGH=36, SHIN=35, ANKLE=4;
+function limb(L,r,mat,taper=1){const g=new THREE.CapsuleGeometry(r,Math.max(.1,L-r*.5),8,16);
+  if(taper!==1){const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);const k=1+(taper-1)*((-y/(L))+.5);p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k);}g.computeVertexNormals();}
+  const m=new THREE.Mesh(g,mat);m.position.y=-L/2;m.castShadow=m.receiveShadow=true;return m;}
+function ball(r,mat,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),mat);m.scale.set(sx,sy,sz);m.castShadow=m.receiveShadow=true;return m;}
+function lathe(pts,sz,mat){const g=new THREE.LatheGeometry(pts.map(([x,y])=>new THREE.Vector2(x,y)),40);g.scale(1,1,sz);const m=new THREE.Mesh(g,mat);m.castShadow=m.receiveShadow=true;return m;}
+const fig=new THREE.Group();
+const hips=new THREE.Group(); hips.position.y=THIGH+SHIN+ANKLE; fig.add(hips);
+hips.add(lathe([[0,-7],[9.5,-6.5],[13.6,-2],[14.4,4],[14,10],[0,10]],.74,jeans));
+{const b=lathe([[14.9,8.4],[15.1,10.6]],.74,beltM);hips.add(b);}
+const spine=new THREE.Group(); spine.position.y=10; hips.add(spine);
+{const t=lathe([[0,-9],[16.2,-9],[16.6,-2],[15.8,4],[16.2,14],[17.8,26],[18.2,32],[16.6,36.5],[12.5,41],[7.6,44],[0,44.5]],.66,shirt);t.scale.x=1.04;spine.add(t);}   // untucked shirt
+{const c=new THREE.Mesh(new THREE.TorusGeometry(6.2,1.7,8,28),shirt);c.rotation.x=Math.PI/2+.3;c.position.set(0,44.2,.6);c.scale.z=.85;spine.add(c);
+ for(const sx of[-1,1]){const fl=new THREE.Mesh(new THREE.BoxGeometry(5,.8,4.5),shirt);fl.position.set(3.4*sx,43.4,4.6);fl.rotation.set(-.9,.5*sx,.35*sx);spine.add(fl);}}   // collar
+const neck=new THREE.Group(); neck.position.y=43; spine.add(neck);
+{const n=new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.9,7,20),neckM);n.position.set(0,2.6,-.2);n.castShadow=true;neck.add(n);}
+const head=new THREE.Group(); head.position.y=3.6; neck.add(head);
+{ /* Gonçalo's head: shape fitted to his front and side outlines, skin and hair projected from his four photos */
+ const lerpTab=(tab,y)=>{if(y>=tab[0][0])return tab[0][1];for(let i=1;i<tab.length;i++){if(y>=tab[i][0]){const [y0,a]=tab[i-1],[y1,b]=tab[i];return b+(a-b)*(y-y1)/(y0-y1);}}return tab[tab.length-1][1];};
+ const WT=[[10.3,.3],[9.6,3.2],[8.7,4.5],[7.1,5.5],[4.1,6.2],[1.06,5.9],[-2,5.3],[-5,5.1],[-8.05,4.0],[-9.9,2.6],[-10.6,.9],[-10.9,.2]];
+ const ZF=[[10.3,-.6],[9.6,4.5],[8.4,7.4],[6.1,8.4],[3.9,8.6],[1.7,8.4],[0,7.4],[-1.7,7.5],[-3.9,8.4],[-6.1,8.2],[-8.4,8.1],[-9.8,7.3],[-10.6,5.2],[-10.9,3]];
+ const ZB=[[10.3,1.6],[9.6,4.5],[8.4,6.65],[6.1,8.1],[3.9,8.55],[1.7,8.55],[0,8.3],[-1.7,8.0],[-3.9,7.6],[-6.1,6.8],[-8.4,4.5],[-9.8,2.5],[-10.6,1.0],[-10.9,.4]];
+ const NOSE=[[.6,0],[-.5,.9],[-1.5,1.7],[-2.5,2.5],[-3.0,2.75],[-3.5,1.5],[-3.95,0]];
+ const g=(v,s)=>Math.exp(-(v*v)/(2*s*s));
+ const se=(c,e)=>Math.sign(c)*Math.pow(Math.abs(c),e);
+ const RY=96, RA=112, Y0=10.3, Y1=-10.9;
+ const verts=[], idx=[];
+ for(let j=0;j<=RY;j++){const y=Y0+(Y1-Y0)*j/RY, W=lerpTab(WT,y), zf=lerpTab(ZF,y), zb=lerpTab(ZB,y), nose=lerpTab(NOSE,y);
+   for(let i=0;i<=RA;i++){const a=i/RA*Math.PI*2, s=Math.sin(a), c=Math.cos(a);
+     const fr=c>0, ex=fr?2/2.7:2/2.3;
+     let x=W*se(s,ex), z=(fr?zf:-zb)*Math.pow(Math.abs(c),fr?2/2.7:2/2.3);
+     if(fr){z+=nose*g(x,.75+.35*Math.min(1,Math.max(0,-y/3)));
+       z-=.55*(g(x-1.75,.75)+g(x+1.75,.75))*g(y-.05,.55)*c;        // eye sockets
+       z+=.25*(g(x-1.8,.9)+g(x+1.8,.9))*g(y-1.1,.35)*c;}           // brow
+     verts.push(x,y,z);}}
+ for(let j=0;j<RY;j++)for(let i=0;i<RA;i++){const a=j*(RA+1)+i,b=a+RA+1;idx.push(a,b,a+1,b,b+1,a+1);}
+ const hg=new THREE.BufferGeometry(); hg.setAttribute("position",new THREE.Float32BufferAttribute(verts,3)); hg.setIndex(idx); hg.computeVertexNormals();
+ // ears: flattened ellipsoids that stick out, like his
+ const earG=new THREE.SphereGeometry(1,24,18);
+ // projection of the four photos
+ const V={front:{x0:450,y0:500,w:620,h:840},left:{x0:420,y0:420,w:1020,h:1100},right:{x0:440,y0:560,w:1000,h:1060},back:{x0:380,y0:380,w:800,h:980}};
+ const uvOf=(k,px,py)=>[(px-V[k].x0)/V[k].w,1-(py-V[k].y0)/V[k].h];
+ function project(geo,mat4){
+   const p=geo.attributes.position,n=geo.attributes.normal,N=p.count,v=new THREE.Vector3(),nn=new THREE.Vector3(),nm=new THREE.Matrix3().getNormalMatrix(mat4);
+   const F=new Float32Array(N*2),Lf=new Float32Array(N*2),Rf=new Float32Array(N*2),B=new Float32Array(N*2),Wt=new Float32Array(N*4);
+   for(let i=0;i<N;i++){v.fromBufferAttribute(p,i).applyMatrix4(mat4); nn.fromBufferAttribute(n,i).applyMatrix3(nm).normalize();
+     const {x,y,z}=v;
+     [F[i*2],F[i*2+1]]=uvOf("front",757+x*32.9,935-y*32.9);
+     [Lf[i*2],Lf[i*2+1]]=uvOf("left",952-z*44.8,975-y*44.8);
+     [Rf[i*2],Rf[i*2+1]]=uvOf("right",872+z*41.7,1095-y*41.7);
+     [B[i*2],B[i*2+1]]=uvOf("back",782-x*59.4,981-y*52);
+     let wf=Math.pow(Math.max(0,nn.z),3), wl=Math.pow(Math.max(0,nn.x),3), wr=Math.pow(Math.max(0,-nn.x),3), wb=Math.pow(Math.max(0,-nn.z),3);
+     if(nn.y>.5){const t=(nn.y-.5)*2; wl+=.3*t; wr+=.3*t; wb+=.25*t; wf+=.1*t;}
+     const sum=wf+wl+wr+wb+1e-5; Wt.set([wf/sum,wl/sum,wr/sum,wb/sum],i*4);}
+   geo.setAttribute("uvF",new THREE.BufferAttribute(F,2)); geo.setAttribute("uvL",new THREE.BufferAttribute(Lf,2));
+   geo.setAttribute("uvR",new THREE.BufferAttribute(Rf,2)); geo.setAttribute("uvB",new THREE.BufferAttribute(B,2));
+   geo.setAttribute("pw",new THREE.BufferAttribute(Wt,4));}
+ const tl=new THREE.TextureLoader(), T={};
+ for(const k of ["front","left","right","back"]){T[k]=tl.load(`assets/face_${k}.jpg`);T[k].colorSpace=THREE.NoColorSpace;T[k].anisotropy=4;}
+ const faceM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.72,metalness:0,envMapIntensity:.35});
+ faceM.onBeforeCompile=sh=>{
+   Object.assign(sh.uniforms,{texF:{value:T.front},texL:{value:T.left},texR:{value:T.right},texB:{value:T.back}});
+   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nattribute vec2 uvF,uvL,uvR,uvB;attribute vec4 pw;varying vec2 vF,vL,vR,vB;varying vec4 vW;")
+     .replace("#include <begin_vertex>","#include <begin_vertex>\nvF=uvF;vL=uvL;vR=uvR;vB=uvB;vW=pw;");
+   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D texF,texL,texR,texB;varying vec2 vF,vL,vR,vB;varying vec4 vW;")
+     .replace("#include <map_fragment>",`vec3 pc=texture2D(texF,vF).rgb*vW.x+texture2D(texL,vL).rgb*vW.y+texture2D(texR,vR).rgb*vW.z+texture2D(texB,vB).rgb*vW.w;
+       diffuseColor.rgb*=pow(pc,vec3(2.2))*1.35;`);
+ };
+ const hm=new THREE.Mesh(hg,faceM); hm.position.set(0,10.4,1.1); hm.castShadow=hm.receiveShadow=true; head.add(hm);
+ project(hg,new THREE.Matrix4());
+ for(const sx of[-1,1]){
+   const eg=earG.clone(); const m=new THREE.Matrix4().compose(new THREE.Vector3(5.45*sx,-1.9,-1.7),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,.42*sx,0)),new THREE.Vector3(.75,2.75,1.6));
+   eg.applyMatrix4(m); eg.computeVertexNormals(); project(eg,new THREE.Matrix4());
+   const e=new THREE.Mesh(eg,faceM); e.position.copy(hm.position); e.castShadow=true; head.add(e);}
+}
+
+function arm(side){const s=new THREE.Group();s.position.set(16.2*side,36.2,0);spine.add(s);s.add(ball(4.9,shirt,1,.85,1));s.add(limb(26,5.4,shirt,.86));
+  const e=new THREE.Group();e.position.y=-26;s.add(e);e.add(ball(4.6,shirt));e.add(limb(23,4.6,shirt,.84));
+  {const cuff=new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.6,2.4,16),shirt);cuff.position.y=-22;e.add(cuff);}
+  const w=new THREE.Group();w.position.y=-23.5;e.add(w);
+  const h=ball(3.2,skin,.78,1.45,1.1);h.position.y=-4.4;w.add(h);
+  const th=ball(1.45,skin,1,1.9,1);th.position.set(-2*side,-3.2,2);th.rotation.z=.4*side;w.add(th);
+  return {s,e,w};}
+function leg(side){const h=new THREE.Group();h.position.set(8*side,0,0);hips.add(h);h.add(limb(THIGH,8.0,jeans,.82));
+  const k=new THREE.Group();k.position.y=-THIGH;h.add(k);k.add(ball(6.2,jeans));k.add(limb(SHIN,6.2,jeans,1.0));
+  const a=new THREE.Group();a.position.y=-SHIN;k.add(a);
+  const f=new THREE.Mesh(new THREE.CapsuleGeometry(3.8,11,6,14),shoeM);f.rotation.x=Math.PI/2;f.scale.set(1.05,1,.85);f.position.set(0,-2.2,4.6);f.castShadow=true;a.add(f);
+  const sole=new THREE.Mesh(new THREE.CapsuleGeometry(3.9,11.6,4,12),soleM);sole.rotation.x=Math.PI/2;sole.scale.set(1.04,1,.35);sole.position.set(0,-4.7,4.6);a.add(sole);
+  return {h,k,a};}
+const L={arm:arm(1),leg:leg(1)}, Rt={arm:arm(-1),leg:leg(-1)};
+cage.add(fig); fig.scale.setScalar(FIG_S); shadow.scale.setScalar(FIG_S);
+
+/* ---------- motion helpers ---------- */
+const clamp01=x=>Math.min(1,Math.max(0,x));
+const ease=x=>{x=clamp01(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+const easeOut=x=>{x=clamp01(x);return 1-Math.pow(1-x,3);};
+const smooth=x=>{x=clamp01(x);return x*x*(3-2*x);};
+const seg=(t,a,b)=>ease((t-a)/(b-a));
+const mix=(a,b,k)=>a+(b-a)*k;
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const polar=(r,a,y=0)=>V3(r*Math.sin(a),y,r*Math.cos(a));
+const leftOf=y=>V3(Math.cos(y),0,-Math.sin(y)), fwdOf=y=>V3(Math.sin(y),0,Math.cos(y));
+
+/* smooth curve through keyframes (Hermite / Catmull-Rom), so the body never stops dead between poses */
+function track(keys){
+  return t=>{const n=keys.length; if(t<=keys[0][0])return keys[0].slice(1); if(t>=keys[n-1][0])return keys[n-1].slice(1);
+    let i=0; while(t>keys[i+1][0])i++;
+    const k0=keys[Math.max(0,i-1)],k1=keys[i],k2=keys[i+1],k3=keys[Math.min(n-1,i+2)], dt=k2[0]-k1[0], u=(t-k1[0])/dt, u2=u*u,u3=u2*u;
+    const out=[];for(let j=1;j<k1.length;j++){
+      const m1=(k2[j]-k0[j])/((k2[0]-k0[0])||1)*dt, m2=(k3[j]-k1[j])/((k3[0]-k1[0])||1)*dt;
+      out.push((2*u3-3*u2+1)*k1[j]+(u3-2*u2+u)*m1+(-2*u3+3*u2)*k2[j]+(u3-u2)*m2);}
+    return out;};
+}
+
+/* ---------- choreography (seconds after "let go"); positions are in the cage's own space ---------- */
+const DC=DOOR, OUT=DC+Math.PI;
+// body: [t, root r, root angle, hips height, facing, spine bend, lean back, head nod, head turn]
+const body=track([
+  [-1,  40,.30,74,.30, .02,  0,  -.05,0],
+  [0,   40,.30,74,.30, .02,  0,  -.05,0],
+  [.55, 40,.31,73.5,.33,.03, 0,  -.1,.85],   // looks right, toward the door
+  [.95, 42,.50,73,.55, .06,  0,  -.05,.6],   // leans in and pushes the door open
+  [1.45,34,.90,66,1.0, .15,  0,   0,.2],     // steps toward the doorway
+  [1.9, 36,1.18,48,1.20,.50, 0,  .28,0],     // crouches low before reaching the door
+  [2.4, 58,1.20,46,1.20,.55, 0,  .30,0],     // duck-walks under the top of the door
+  [2.65,78,1.20,47,1.55,.42,-.02,.15,-.15],  // half out, still low
+  [2.95,94,1.20,42,3.3, .2,-.12,.05,-.3],   // outside: turns while staying low
+  [3.25,94,1.20,58,OUT-.25,.06,-.17,0,-.1],  // facing the cage, leans back and rises
+  [3.6, 93,1.20,72,OUT, .03,-.13,-.05,0],    // heels over the edge
+  [4.3, 92,1.20,74,OUT, .02,-.11,-.28,0],    // ready; glances up at the sky
+  [4.9, 92,1.20,62,OUT, .08,-.17,-.05,0],    // bends his knees
+  [5.15,92,1.20,69,OUT, .02,-.30, .1,0],     // drives through his legs
+  [5.3, 92,1.20,76,OUT,-.06,-.42, .2,0]]);   // legs extended: he lets go
+const T_PUSH=4.95;
+
+/* footsteps: each foot stays planted until it steps; [start, land, position, facing] */
+function bodyAt(t){const [r,a,hy,yaw,spX,tip,hdX,hdY]=body(t);return {root:polar(r,a,FLOOR),hy,yaw,spX,tip,hdX,hdY};}
+function footFromBody(t,side,fwd){const b=bodyAt(t);return {p:b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),fwd*FIG_S),yaw:b.yaw};}
+const STEPS={
+  L:[{t:-1,...footFromBody(0,1,2)},{a:1.0,t:1.4,...footFromBody(1.5,1,4)},{a:1.9,t:2.3,...footFromBody(2.45,1,6)},
+     {a:2.55,t:2.95,p:polar(89,DC+.03,FLOOR),yaw:1.9},{a:3.1,t:3.45,p:polar(91,DC-.11,FLOOR),yaw:OUT}],
+  R:[{t:-1,...footFromBody(0,-1,2)},{a:1.4,t:1.85,...footFromBody(1.95,-1,4)},{a:2.3,t:2.7,p:polar(87,DC-.08,FLOOR),yaw:1.4},
+     {a:2.95,t:3.35,p:polar(91,DC+.11,FLOOR),yaw:OUT-.2},{a:3.45,t:3.6,p:polar(91,DC+.11,FLOOR),yaw:OUT}]};
+function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
+  const cur=list[i],nx=list[i+1];
+  if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw,lift:0};
+  const k=smooth((t-nx.a)/(nx.t-nx.a));
+  if(k>=1)return {p:nx.p.clone(),yaw:nx.yaw,lift:0};
+  const p=cur.p.clone().lerp(nx.p,k); p.y+=8*Math.sin(Math.PI*k);
+  return {p,yaw:mix(cur.yaw,nx.yaw,k),lift:Math.sin(Math.PI*k)};}
+
+/* hands: where each hand grips, and when it moves to the next grip */
+const nearestBar=a=>off+Math.round((a-off)/S)*S;
+const DOOR_BAR=DOOR-.5*S;
+function doorAngleAt(t){if(t===null||t<.75)return 0;const u=t-.75;return 1.7*smooth(u/.95)+.05*Math.exp(-2*Math.max(0,u-.95))*Math.sin(Math.max(0,u-.95)*7);}
+function doorBarAt(t,y){const a=openSign*doorAngleAt(t);const p=polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);return p;}
+const idleBody=bodyAt(0);
+function relaxedHand(side){return t=>{const b=bodyAt(Math.max(0,t));return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};}
+const GRIP={
+  L:[{t:-1,p:()=>polar(R,nearestBar(.52),118)},
+     {a:.45,t:.75,p:t=>doorBarAt(t,112)},           // pushes the door open
+     {a:1.15,t:1.55,p:relaxedHand(1)},
+     {a:1.95,t:2.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)},   // grabs the top of the door
+     {a:2.85,t:3.3,p:()=>polar(R,hingeA,112)},
+     {a:5.18,t:1e9,p:null}],
+  R:[{t:-1,p:()=>polar(R,nearestBar(.08),118)},
+     {a:1.2,t:1.6,p:relaxedHand(-1)},
+     {a:1.95,t:2.35,p:()=>polar(R,hingeA,96)},
+     {a:2.6,t:3.1,p:()=>polar(R,freeA,112)},
+     {a:5.18,t:1e9,p:null}]};
+function handAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
+  const cur=list[i],nx=list[i+1];
+  const at=(g,tt)=>g.p?g.p(tt):null;
+  if(!nx||t<nx.a)return at(cur,t);
+  if(!nx.p)return null;
+  const k=ease((t-nx.a)/(nx.t-nx.a)), p0=at(cur,nx.a), p1=at(nx,t);
+  if(k>=1)return at(nx,t);
+  const p=p0.clone().lerp(p1,k); p.y+=6*Math.sin(Math.PI*k);
+  // pull the moving hand slightly toward the body so it never passes through bars
+  const r=Math.hypot(p.x,p.z), rr=r-5*Math.sin(Math.PI*k); p.x*=rr/r; p.z*=rr/r;
+  return p;}
+
+/* ---------- two-bone limb solver: puts a hand or foot exactly on its target ---------- */
+const _t=new THREE.Vector3(),_p=new THREE.Vector3(),_u=new THREE.Vector3(),_w=new THREE.Vector3(),_x=new THREE.Vector3(),_y=new THREE.Vector3(),_z=new THREE.Vector3(),_m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_qp=new THREE.Quaternion();
+function solveLimb(upper,lower,L1,L2,targetW,poleW,bend){
+  const par=upper.parent; par.updateMatrixWorld(true);
+  _t.copy(targetW); par.worldToLocal(_t); _t.sub(upper.position);
+  _p.copy(poleW); par.worldToLocal(_p); _p.sub(upper.position);
+  let d=_t.length(); d=Math.min(Math.max(d,Math.abs(L1-L2)+.01),L1+L2-.01);
+  const td=_t.normalize();
+  const ca=clamp01x((L1*L1+d*d-L2*L2)/(2*L1*d)), sa=Math.sqrt(1-ca*ca);
+  const b=_p.clone().addScaledVector(td,-_p.dot(td)); if(b.lengthSq()<1e-6)b.set(0,-1,0); b.normalize();
+  _u.copy(td).multiplyScalar(ca).addScaledVector(b,sa);                 // upper bone direction
+  _w.copy(td).multiplyScalar(d).addScaledVector(_u,-L1).normalize();   // lower bone direction
+  _y.copy(_u).negate();
+  _z.copy(_w).addScaledVector(_u,-_w.dot(_u)); if(_z.lengthSq()<1e-8)_z.copy(b); _z.normalize(); if(bend>0)_z.negate();
+  _x.crossVectors(_y,_z).normalize(); _z.crossVectors(_x,_y);
+  _m.makeBasis(_x,_y,_z); upper.quaternion.setFromRotationMatrix(_m);
+  const ci=clampm1((L1*L1+L2*L2-d*d)/(2*L1*L2)); lower.quaternion.setFromEuler(new THREE.Euler(bend*(Math.PI-Math.acos(ci)),0,0));
+}
+const clamp01x=x=>Math.min(1,Math.max(-1,x)), clampm1=clamp01x;
+const ARM1=26, ARM2=27.7, LEG1=THIGH, LEG2=SHIN, ANKLE_H=5.3;
+
+function setFlatFoot(leg,yaw){       // keep the shoe flat on the rim, pointing where he steps
+  leg.a.parent.updateMatrixWorld(true);
+  cage.getWorldQuaternion(_q); _q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),yaw));
+  leg.a.parent.getWorldQuaternion(_qp); leg.a.quaternion.copy(_qp.invert().multiply(_q));}
+
+/* ---------- apply a pose while he is on the cage ---------- */
+let leanNow=0;
+function poseOnCage(t,clock){
+  const b=bodyAt(t<0?0:t);
+  const br=Math.sin(clock*1.3);
+  fig.position.copy(b.root); fig.rotation.set(0,0,0); fig.rotateY(b.yaw); fig.rotateX(b.tip);
+  hips.position.y=b.hy+(t<0?.4*br:0);
+  spine.rotation.set(b.spX+.012*br,0,0);
+  let hdX=b.hdX,hdY=b.hdY; if(t<0){hdY=.35*Math.sin(clock*.23)*Math.max(0,Math.sin(clock*.11)); hdX=-.06+.04*Math.sin(clock*.17);}
+  head.rotation.set(hdX,hdY,0);
+  leanNow=b.tip;
+  fig.updateMatrixWorld(true);
+  const tt=t<0?-1:t;
+  // feet
+  for(const [leg,list,side] of [[L.leg,STEPS.L,1],[Rt.leg,STEPS.R,-1]]){
+    const f=footAt(list,tt); const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
+    const pole=V3(.15*side,-.2,1).applyQuaternion(fig.quaternion).multiplyScalar(80);
+    leg.h.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(leg.h,leg.k,LEG1,LEG2,cage.localToWorld(tgt),poleW,1);
+    setFlatFoot(leg,f.yaw);}
+  // hands
+  for(const [arm,list,side] of [[L.arm,GRIP.L,1],[Rt.arm,GRIP.R,-1]]){
+    const g=handAt(list,tt);
+    if(g){const pole=V3(.8*side,-1,-.35).applyQuaternion(fig.quaternion).multiplyScalar(80);
+      arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+      solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
+    else{arm.s.rotation.set(-1.4,0,.3*side); arm.e.rotation.set(-.3,0,0);}}
+  return b;
+}
+
+/* ---------- the fall: a real jump. centre of mass follows a ballistic arc, he rotates backwards ---------- */
+const FALL_POSE={lSx:-1.5,lSz:.3,lE:-.95,rSx:-.75,rSz:-.25,rE:-1.65,lHx:-.18,lK:.22,rHx:-.08,rK:.14,ank:.15};
+let rel=null;
+function captureRelease(clock){
+  const sw=swayAt(T_RELEASE-1e-3,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
+  poseOnCage(T_RELEASE-1e-3,clock); fig.updateMatrixWorld(true);
+  const o=massOffset(); relTilt={x:o.x,z:o.z};
+  const pel=new THREE.Vector3(); hips.getWorldPosition(pel); stage.worldToLocal(pel);
+  const qs=new THREE.Quaternion(); fig.getWorldQuaternion(qs); const qstage=new THREE.Quaternion(); stage.getWorldQuaternion(qstage); qs.premultiply(qstage.invert());
+  const bones=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone());
+  stage.add(fig);
+  rel={pel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x};
+}
+const _e=new THREE.Euler(), _qq=new THREE.Quaternion();
+function poseFalling(u){
+  // backward rotation: starts at his push speed, air slows it as he settles face-up
+  const w0=-1.15,kd=.9, dTip=(w0/kd)*(1-Math.exp(-kd*u));
+  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,0,.08*Math.sin(u*.6)*smooth(u))));
+  fig.quaternion.copy(q);
+  hips.position.y=rel.hy;
+  // centre of mass: launch speed outward and slightly up, gravity down, air drag on the sideways drift
+  const vOut=62,vUp=20,g=46,ka=.75;
+  const out=vOut/ka*(1-Math.exp(-ka*u)), up=vUp*u-.5*g*u*u;
+  const dir=V3(Math.sin(DC),0,Math.cos(DC));
+  const pel=rel.pel.clone().addScaledVector(dir,out); pel.y+=up;
+  const off=V3(0,rel.hy*FIG_S,0).applyQuaternion(q);
+  fig.position.copy(pel).sub(off);
+  spine.rotation.set(mix(rel.spX,-.1,smooth(u/1.2)),0,0); head.rotation.set(mix(rel.hdX,-.2,smooth(u/1.5)),.08*Math.sin(u*.9),0);
+  // limbs: ease from where they were into a loose, drifting fall pose
+  const k=smooth(u/.7), on=smooth(u/.9);
+  const a1=Math.sin(u*1.7),a2=Math.sin(u*1.7+2.1),l1=Math.sin(u*1.3+.6),l2=Math.sin(u*1.3+2.8);
+  const P=FALL_POSE;
+  const fk=[[P.lSx+.22*a1*on,0,P.lSz+.08*a2*on],[P.lE-.18*Math.max(0,a1)*on,0,0],[P.rSx+.22*a2*on,0,P.rSz-.08*a1*on],[P.rE-.18*Math.max(0,a2)*on,0,0],
+    [P.lHx+.16*l1*on,0,.03],[P.lK+.15*Math.max(0,l1)*on,0,0],[P.ank,0,0],[P.rHx+.16*l2*on,0,-.03],[P.rK+.15*Math.max(0,l2)*on,0,0],[P.ank,0,0]];
+  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{
+    _qq.setFromEuler(_e.set(...fk[i])); o.quaternion.copy(rel.bones[i]).slerp(_qq,k);});
+}
+
+/* ---------- layout: map plate pixels to screen and world ---------- */
+let W=1,H=1,unit=1;
+function layout(){
+  W=stageEl.clientWidth; H=stageEl.clientHeight;
+  const portrait=W/H<=1;
+  let bx=0,by=0,bw=W,bh=H,px=.72,py=.5;
+  if(portrait){by=H*.34;bh=H*.66;px=.85;py=1;}
+  const k=Math.max(bw/PW,bh/PH), w=PW*k, h=PH*k, x0=bx+(bw-w)*px, y0=by+(bh-h)*py;
+  const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
+  renderer.setPixelRatio(dpr); renderer.setSize(W,H,false); bgUni.res.value.set(W*dpr,H*dpr);
+  bgUni.rect.value.set(x0*dpr,y0*dpr,w*dpr,h*dpr);
+  camera.aspect=W/H; const D=3000; camera.position.set(0,0,D); camera.updateProjectionMatrix();
+  const Hw=2*D*Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  unit=k*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
+  const sx=portrait?W*.65:x0+ANCHOR.x*k, sy=portrait?y0+(ANCHOR.y+40)*k:y0+ANCHOR.y*k;
+  stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
+  stage.scale.setScalar(unit);
+  // sun shadows cover the cage
+  const c=stage.position.clone().add(new THREE.Vector3(0,110*unit,0));
+  sun.target.position.copy(c); sun.position.copy(c).addScaledVector(SUN_DIR,900*unit);
+  const sc=sun.shadow.camera, e=190*unit; sc.left=-e;sc.right=e;sc.top=e;sc.bottom=-e;sc.near=1;sc.far=2000*unit;sc.updateProjectionMatrix();
+  sun.shadow.normalBias=.4*unit;
+}
+
+/* ---------- timeline ---------- */
+let t0=null, released=false, relTilt={x:0,z:0};
+function massOffset(){            // his weight pulls the cage a little toward where he stands and leans
+  const r=Math.hypot(fig.position.x,fig.position.z)+1e-6, ext=r+55*Math.max(0,Math.sin(-leanNow));
+  const k=8e-6; return {x:k*fig.position.z/r*ext, z:-k*fig.position.x/r*ext};}
+function pushImpulse(t){if(t===null||t<T_PUSH)return 0;const u=t-T_PUSH;return Math.exp(-.55*u)*Math.sin(1.6*u);}   // his legs push the cage away
+function swayAt(t,clock){
+  let rx=.0011*Math.sin(clock*.53), rz=.0016*Math.sin(clock*.41+1);
+  if(t===null) return {rx,rz};
+  const I=.0017*pushImpulse(t); rx+=I*Math.cos(DC); rz-=I*Math.sin(DC);
+  if(t<T_RELEASE){const o=massOffset(); return {rx:rx+o.x, rz:rz+o.z};}
+  const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
+  return {rx:rx+relTilt.x*d, rz:rz+relTilt.z*d};
+}
+function frame(now){
+  const clock=now/1000;
+  const t=t0===null?null:(now-t0)/1000, tt=t===null?-1:t;
+  door.rotation.y=openSign*doorAngleAt(t);
+  if(tt<T_RELEASE){
+    if(released){cage.add(fig);released=false;}
+    const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
+    const b=poseOnCage(tt,clock);
+    const r=Math.hypot(fig.position.x,fig.position.z);
+    shadow.visible=r<R-6; shadow.position.x=fig.position.x; shadow.position.z=fig.position.z; shadow.rotation.z=-b.yaw;
+  } else {
+    if(!released){captureRelease(clock); released=true;}
+    const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
+    poseFalling(t-T_RELEASE); shadow.visible=false;
+  }
+  renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera);
+}
+
+/* ---------- boot ---------- */
+new THREE.TextureLoader().load("assets/plate.jpg",tex=>{
+  tex.colorSpace=THREE.NoColorSpace; tex.minFilter=THREE.LinearFilter; tex.generateMipmaps=false; bgUni.tex.value=tex;
+  const env=tex.clone(); env.colorSpace=THREE.SRGBColorSpace; env.mapping=THREE.EquirectangularReflectionMapping; env.needsUpdate=true;
+  const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromEquirectangular(env).texture; pm.dispose();
+  layout(); canvas.classList.add("ready");
+  const loop=n=>{frame(n);requestAnimationFrame(loop)};
+  if(!window.__manual) requestAnimationFrame(loop);
+  window.__seek=(t,clock=10)=>{const now=clock*1000; t0=t===null?null:now-t*1000; frame(now);};
+  window.__dbg={camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door};
+  window.__ready=true;
+});
+new ResizeObserver(()=>layout()).observe(stageEl);
+
+document.getElementById("letgo").addEventListener("click",()=>{
+  stageEl.classList.add("played");
+  const now=performance.now();
+  t0=reduce?now-30000:now; released=false; cage.add(fig);
+});
+</script>
+
+</body>
+</html>

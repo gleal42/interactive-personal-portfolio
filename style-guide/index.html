@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Cage Style Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+html,body{margin:0}
+
+/* Layout: one sky. Content floats over a deep-teal field like the figure in the clips; a thin "ladder" rail on the left ties sections together. Single deliberate look. */
+:root{
+  --sky-deep:#1d414c;   /* page ground: upper sky, darkened */
+  --sky:#3e6e7b;        /* main sky, the clips' dominant colour */
+  --haze:#5f7b7d;       /* horizon haze */
+  --storm:#2d3e42;      /* cloud shadow */
+  --cloud:#efd4bf;      /* sunlit cloud highlight, used for text */
+  --cloud-shade:#b9a695;/* cloud mid-tone */
+  --brass:#a8927c;      /* cage metal, the one accent */
+  --iron:#1d2927;       /* cage shadow, darkest ink */
+  --fg:var(--cloud);
+  --muted:#b9c4c1;
+  --line:rgba(239,212,191,.18);
+  --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--sky-deep)}
+body{background:linear-gradient(180deg,var(--sky-deep) 0%,#244f5b 45%,var(--sky-deep) 100%);color:var(--fg);font:16px/1.6 var(--body);padding-inline:16px}
+.wrap{max-width:1040px;margin:0 auto;position:relative;padding-block:0 96px}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;line-height:1.05}
+h2{font-size:clamp(2rem,4.5vw,3rem)}
+h3{font-size:1.35rem}
+p{margin:0;max-width:62ch}
+.eyebrow{font:500 .72rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+.muted{color:var(--muted)}
+a{color:var(--cloud)}
+:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+/* hero */
+.hero{position:relative;margin-inline:-16px;min-height:min(78vh,640px);display:grid;align-items:end;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero video,.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:70% 40%}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(29,65,76,.92) 0%,rgba(29,65,76,.55) 45%,rgba(29,65,76,0) 75%),linear-gradient(0deg,rgba(29,65,76,.9) 0%,rgba(29,65,76,0) 40%)}
+.hero-copy{position:relative;z-index:1;padding:48px 16px 56px;max-width:1040px;width:100%;margin:0 auto;display:grid;gap:18px}
+.hero h1{font-size:clamp(2.8rem,8vw,5.6rem);font-style:italic;max-width:9ch}
+.hero p{font-size:1.1rem;max-width:42ch;color:#dfe6e3}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.btn{font:600 .95rem var(--body);padding:12px 22px;border-radius:999px;border:1px solid var(--brass);background:transparent;color:var(--cloud);cursor:pointer;transition:background .6s cubic-bezier(.2,.7,.2,1),color .6s}
+.btn:hover{background:var(--cloud);color:var(--iron);border-color:var(--cloud)}
+.btn.solid{background:var(--cloud);color:var(--iron);border-color:var(--cloud)}
+.btn.solid:hover{background:transparent;color:var(--cloud)}
+
+/* ladder rail */
+main{display:grid;gap:96px;padding-top:72px;position:relative}
+@media (min-width:860px){
+  main{padding-left:56px}
+  main::before{content:"";position:absolute;left:12px;top:72px;bottom:0;width:18px;
+    background:linear-gradient(var(--brass),var(--brass)) left/1px 100% no-repeat,linear-gradient(var(--brass),var(--brass)) right/1px 100% no-repeat,repeating-linear-gradient(180deg,transparent 0 22px,rgba(168,146,124,.55) 22px 23px);opacity:.5}
+}
+section{display:grid;gap:28px}
+.head{display:grid;gap:12px}
+
+/* principles */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px 32px}
+.rule{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:16px;min-width:0}
+.rule p{color:var(--muted);font-size:.95rem}
+
+/* palette */
+.swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}@media (max-width:640px){.swatches{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sw{display:grid;gap:10px;background:none;border:0;padding:0;text-align:left;color:inherit;cursor:pointer;font:inherit}
+.chip{aspect-ratio:4/3;border-radius:6px;border:1px solid var(--line);max-width:100%}
+.sw b{font:500 .95rem var(--body)}
+.sw code{font:400 .8rem var(--mono);color:var(--muted)}
+.sw small{font-size:.8rem;color:var(--muted);line-height:1.4}
+.ratio{display:flex;height:22px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.ratio span{display:block}
+
+/* type */
+.specimen{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.spec{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px;min-width:0}
+.spec .big{font-size:clamp(2.6rem,6vw,3.8rem);line-height:1}
+.scale{display:grid;gap:6px;font:400 .82rem var(--mono);color:var(--muted)}
+
+/* motifs */
+.motifs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+.motif{display:grid;gap:12px;min-width:0}
+.tile{height:180px;border-radius:6px;position:relative;overflow:hidden;border:1px solid var(--line);background:var(--sky)}
+.bars{background:repeating-linear-gradient(90deg,transparent 0 26px,rgba(29,41,39,.55) 26px 28px),radial-gradient(120% 90% at 50% 120%,var(--cloud) 0%,var(--cloud-shade) 35%,var(--sky) 70%)}
+.cloudtile{background:linear-gradient(180deg,var(--sky-deep),var(--sky) 70%,var(--haze))}
+.puff{position:absolute;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--cloud) 0%,var(--cloud-shade) 55%,rgba(185,166,149,0) 72%);filter:blur(2px);animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(30px) translateY(-6px)}}
+.laddertile{background:var(--sky-deep);display:grid;place-items:center}
+.ladder{width:26px;height:150px;background:linear-gradient(var(--brass),var(--brass)) left/1.5px 100% no-repeat,linear-gradient(var(--brass),var(--brass)) right/1.5px 100% no-repeat,repeating-linear-gradient(180deg,transparent 0 14px,var(--brass) 14px 15.5px)}
+.grain{background:var(--sky)}
+.grain::after{content:"";position:absolute;inset:0;opacity:.35;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.motif p{font-size:.9rem;color:var(--muted)}
+
+/* motion */
+.motion{display:grid;gap:0;border-top:1px solid var(--line)}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) 120px;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);align-items:center}
+.mrow code{font:400 .82rem var(--mono);color:var(--brass)}
+.mrow p{font-size:.92rem;color:var(--muted)}
+.track{height:30px;position:relative;border-left:1px solid var(--line)}
+.dot{position:absolute;top:9px;left:0;width:12px;height:12px;border-radius:50%;background:var(--cloud)}
+.d1{animation:glide 4s cubic-bezier(.2,.7,.2,1) infinite}
+.d2{animation:float 6s ease-in-out infinite alternate}
+.d3{animation:fall 3.2s cubic-bezier(.55,0,.35,1) infinite}
+@keyframes glide{0%{left:0;opacity:0}20%{opacity:1}70%,100%{left:calc(100% - 12px);opacity:1}}
+@keyframes float{from{left:20%;top:13px}to{left:65%;top:5px}}
+@keyframes fall{0%{left:0;top:2px}60%,100%{left:calc(100% - 12px);top:16px}}
+@media (max-width:640px){.mrow{grid-template-columns:1fr}.track{max-width:200px}}
+
+/* frames */
+.frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.frames figure{margin:0;display:grid;gap:6px}
+.frames img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:4px;display:block}
+.frames figcaption{font:400 .75rem var(--mono);color:var(--muted)}
+
+/* prompt */
+.prompt{background:rgba(29,41,39,.45);border:1px solid var(--line);border-radius:8px;padding:22px;display:grid;gap:14px}
+.prompt pre{margin:0;white-space:pre-wrap;font:400 .9rem/1.6 var(--mono);color:#dfe6e3;overflow-wrap:anywhere}
+.toast{font:500 .8rem var(--mono);color:var(--brass);min-height:1em}
+
+.uses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 32px}
+.uses div{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:6px;min-width:0}
+.uses p{font-size:.92rem;color:var(--muted)}
+@media (max-width:640px){.uses{grid-template-columns:1fr}}
+footer{margin-top:80px;font:400 .78rem var(--mono);color:var(--muted)}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <video id="heroVideo" src="hero.mp4" poster="poster.jpg" autoplay muted loop playsinline aria-label="A man climbs out of a birdcage hanging in the sky and falls weightlessly past a cloud"></video>
+    <div class="hero-copy">
+      <span class="eyebrow">Style guide · drawn from your two Gemini clips</span>
+      <h1>The door was never locked.</h1>
+      <p>A surreal, calm world: one small person, one enormous sky, and an open cage. Every page on the site should feel like a frame from that moment.</p>
+      <div class="btns"><button class="btn solid" type="button">Step out</button><button class="btn" type="button">See the sky</button></div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="head"><span class="eyebrow">The world</span><h2>Four rules the clips already follow</h2></div>
+      <div class="rules">
+        <div class="rule"><h3>Small figure, big sky</h3><p>The person never fills the frame. Leave at least two thirds of every image to sky and cloud.</p></div>
+        <div class="rule"><h3>Warm light, cool air</h3><p>Sunlit clouds in peach and sand against a flat teal sky. No pure white, no pure blue.</p></div>
+        <div class="rule"><h3>Everyday objects, wrong place</h3><p>Birdcage, ladder, chain. Ordinary things hanging where they shouldn't, painted realistically.</p></div>
+        <div class="rule"><h3>Weightless, never dramatic</h3><p>Falling looks like floating. Slow, calm and quiet; no explosions, lens flares or speed lines.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Palette · sampled from the frames</span><h2>Sky first, cloud second, brass sparingly</h2><p class="muted">Click a swatch to copy its hex. The bar shows how much of a page each colour should cover.</p></div>
+      <div class="ratio" aria-hidden="true"><span style="flex:46;background:var(--sky-deep)"></span><span style="flex:20;background:var(--sky)"></span><span style="flex:10;background:var(--haze)"></span><span style="flex:8;background:var(--storm)"></span><span style="flex:10;background:var(--cloud)"></span><span style="flex:4;background:var(--cloud-shade)"></span><span style="flex:2;background:var(--brass)"></span></div>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Type</span><h2>An old-fashioned serif in a modern sky</h2><p class="muted">The high-contrast serif gives the surreal, painting-like tone; the clean sans keeps the page easy to read.</p></div>
+      <div class="specimen">
+        <div class="spec"><span class="eyebrow">Display · Bodoni Moda</span><span class="big" style="font-family:var(--display);font-style:italic">Open the cage</span><p class="muted">Headlines and pull quotes. Italic for the big moments, roman for section titles.</p></div>
+        <div class="spec"><span class="eyebrow">Body · Figtree</span><p style="font-size:1.05rem">Most of us aren't held in by locks. We stay because the cage is familiar and the sky looks far away.</p><p class="muted">Paragraphs, buttons, navigation.</p></div>
+        <div class="spec"><span class="eyebrow">Labels · IBM Plex Mono</span><div class="scale"><span>Display XL · 88 / 1.0</span><span>Display L · 48 / 1.05</span><span>Title · 22 / 1.2</span><span>Body · 16 / 1.6</span><span>Label · 11.5 / caps +14%</span></div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Motifs · made in code, no generator needed</span><h2>Fill the gaps between videos</h2></div>
+      <div class="motifs">
+        <div class="motif"><div class="tile bars"></div><h3>Cage bars</h3><p>Thin vertical stripes over a cloud glow. Section backgrounds and image masks.</p></div>
+        <div class="motif"><div class="tile cloudtile"><span class="puff" style="width:170px;height:120px;left:12%;top:58%"></span><span class="puff" style="width:130px;height:100px;left:44%;top:50%;animation-duration:32s"></span><span class="puff" style="width:110px;height:90px;left:66%;top:62%;animation-duration:22s"></span></div><h3>Drifting cloud</h3><p>Soft gradient puffs that move a few pixels a minute. A light hero when no video fits.</p></div>
+        <div class="motif"><div class="tile laddertile"><span class="ladder"></span></div><h3>Ladder</h3><p>Dividers, timelines and scroll progress. It's the rail on the left of this page.</p></div>
+        <div class="motif"><div class="tile grain"></div><h3>Film grain</h3><p>A faint noise overlay on flat colour so code-made sections match the texture of the video.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Motion</span><h2>Slow in, slower out</h2></div>
+      <div class="motion">
+        <div class="mrow"><code>glide · 600–900 ms</code><p>Hovers and reveals. Long ease-out, so things settle gently.</p><div class="track"><span class="dot d1"></span></div></div>
+        <div class="mrow"><code>float · 6–30 s</code><p>Ambient clouds and backgrounds. Barely noticeable, never loops sharply.</p><div class="track"><span class="dot d2"></span></div></div>
+        <div class="mrow"><code>fall · 1.2–3 s</code><p>The one dramatic gesture, for page transitions: a soft drop, like the figure leaving the cage.</p><div class="track"><span class="dot d3"></span></div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Reuse · stills pulled from the clip</span><h2>One video, many assets</h2><p class="muted">Each frame works as a thumbnail, social image or section background.</p></div>
+      <div class="frames">
+        <figure><img src="s_0.5.jpg" alt="Figure standing inside the cage"><figcaption>0:00 · inside</figcaption></figure>
+        <figure><img src="s_4.jpg" alt="Figure climbing out of the open cage door"><figcaption>0:04 · the door</figcaption></figure>
+        <figure><img src="s_7.jpg" alt="Figure letting go of the cage"><figcaption>0:07 · letting go</figcaption></figure>
+        <figure><img src="s_9.5.jpg" alt="Figure floating free below the empty cage"><figcaption>0:09 · free</figcaption></figure>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Style prompt</span><h2>Paste this into any image or video generator</h2><p class="muted">Add your subject on the first line; keep the rest the same so every new piece matches.</p></div>
+      <div class="prompt">
+        <pre id="promptText">[SUBJECT, e.g. "a wooden door standing alone on a cloud"]
+
+Surreal photorealistic scene in the style of a calm magical-realist painting. A vast, flat teal-blue sky (#3E6E7B) fills most of the frame. Large cumulus clouds lit by warm late-afternoon sun, peach and sand highlights (#EFD4BF) with soft grey-teal shadows. Ordinary objects (a brass birdcage, a thin ladder, a hanging chain) placed impossibly in the sky. If a person appears, they are small in the frame, in casual clothes, moving slowly and weightlessly. Muted, slightly desaturated colour grade, gentle film grain, soft natural light, no lens flare, no text, no dramatic action. 16:9, wide composition with empty sky on one side for text.</pre>
+        <div class="btns"><button class="btn" type="button" id="copyPrompt">Copy prompt</button><span class="toast" id="toast" role="status"></span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head"><span class="eyebrow">Using the videos on the site</span><h2>Keep them light and quiet</h2></div>
+      <div class="uses">
+        <div><h3>Hero loop</h3><p>Muted, looping, no controls. Re-encoded at 960px it's about 140 KB, so it loads fast on phones.</p></div>
+        <div><h3>Always a poster</h3><p>Show the last frame as a still while it loads and for visitors who prefer reduced motion.</p></div>
+        <div><h3>Darken for text</h3><p>Fade the sky side to the page colour, as in the hero above, so headlines stay readable.</p></div>
+        <div><h3>The sparkle mark</h3><p>Gemini adds a small star in the bottom-right corner. Check Google's terms for how you may use and present the clips.</p></div>
+      </div>
+    </section>
+  </main>
+  <footer>Colours sampled from gemini_shared_video_20261013.mp4 and gemini_generated_video_62f9dd0b.mp4</footer>
+</div>
+
+<script>
+const sw=[["Sky deep","#1D414C","Page background"],["Sky","#3E6E7B","Main surfaces, the dominant colour"],["Haze","#5F7B7D","Secondary surfaces, horizon"],["Storm","#2D3E42","Cloud shadow, cards"],["Cloud","#EFD4BF","Text and highlights"],["Cloud shade","#B9A695","Secondary text on light areas"],["Brass","#A8927C","The only accent: links, borders, details"],["Iron","#1D2927","Darkest ink, text on cloud"]];
+const box=document.getElementById("swatches");
+const toast=document.getElementById("toast");
+function copy(text,msg){try{navigator.clipboard.writeText(text).then(()=>{toast.textContent=msg},()=>{toast.textContent="Copy blocked here. Select the text instead."})}catch(e){toast.textContent="Copy blocked here. Select the text instead."}}
+sw.forEach(([n,h,r])=>{const b=document.createElement("button");b.className="sw";b.type="button";b.innerHTML=`<span class="chip" style="background:${h}"></span><b>${n}</b><code>${h}</code><small>${r}</small>`;b.addEventListener("click",()=>{const c=b.querySelector("code");try{navigator.clipboard.writeText(h).then(()=>{c.textContent="Copied";setTimeout(()=>c.textContent=h,1200)},()=>{})}catch(e){}});box.appendChild(b)});
+document.getElementById("copyPrompt").addEventListener("click",()=>copy(document.getElementById("promptText").textContent,"Prompt copied"));
+const v=document.getElementById("heroVideo");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches){v.removeAttribute("autoplay");v.pause()}
+</script>
+
+</body>
+</html>
