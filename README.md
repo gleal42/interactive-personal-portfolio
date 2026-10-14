@@ -71,7 +71,11 @@ Most things are a single constant near the top of the script in `index.html`:
 | Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
 | Climbing speed | `CLIMB_P` (seconds per two rungs) |
 
-## Note on the photos
+## License
 
-`assets/face_*.jpg` are cropped photos of the site's owner, used to texture the 3D head.
-Please don't reuse them outside this project.
+© 2026 Gonçalo. **All rights reserved.** The code, design, animation and images are not
+open source: you may view them, but not copy, reuse or redistribute them without written
+permission. See [LICENSE](LICENSE). This includes `assets/face_*.jpg`, which are photos of
+the site's owner.
+
+Third-party parts keep their own licenses: three.js (MIT) and Crimson Pro (SIL OFL 1.1).

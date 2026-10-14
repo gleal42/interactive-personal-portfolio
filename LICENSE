@@ -1,0 +1,18 @@
+Copyright (c) 2026 Gonçalo (github.com/gleal42). All rights reserved.
+
+This repository and the website it produces, including the source code, design,
+animation, text and images (among them the photographs in assets/face_*.jpg),
+are the property of the copyright holder.
+
+You may view the source and the website, and fork this repository on GitHub as
+permitted by GitHub's Terms of Service. No other permission is granted: you may
+not copy, modify, redistribute, publish, or use any part of this work, in whole
+or in part, for any purpose, without prior written permission from the
+copyright holder.
+
+Third-party components keep their own licenses:
+- three.js (https://threejs.org), loaded from a CDN, is MIT-licensed.
+- Crimson Pro (Google Fonts) is licensed under the SIL Open Font License 1.1.
+
+For permission requests, open an issue at
+https://github.com/gleal42/interactive-personal-portfolio/issues
