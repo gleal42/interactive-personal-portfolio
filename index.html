@@ -67,6 +67,16 @@ h1 .line:nth-child(4){animation-delay:.75s}
 #about p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
 #about small{font-size:.95rem;color:var(--gold);font-style:italic}
 
+/* phones held sideways: compact quote sized to the screen height, clouds pushed to the right */
+@media (min-aspect-ratio:1/1) and (max-height:560px){
+  .stage{background-position:right center;background-size:auto 100%;background-color:#2b5a69}
+  nav{padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  nav a{font-size:.9rem}
+  nav .logo{font-size:1.3rem}
+  .copy{padding-bottom:2vh}
+  h1{font-size:clamp(1rem,5.6vh,1.6rem);line-height:1.42;max-width:none}
+  .hint{margin-top:10px;font-size:.8rem}
+}
 @media (max-aspect-ratio:1/1){
   .stage{background-position:85% 100%;background-size:auto 66%}
   .stage{background-color:#2e5f71}
@@ -632,6 +642,7 @@ function layout(){
   const portrait=W/H<=1;
   let bx=0,by=0,bw=W,bh=H,px=.72,py=.5;
   if(portrait){by=H*.34;bh=H*.66;px=.85;py=1;}
+  else if(H<560){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the clouds to the right of the quote
   const k=Math.max(bw/PW,bh/PH), w=PW*k, h=PH*k, x0=bx+(bw-w)*px, y0=by+(bh-h)*py;
   const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
   renderer.setPixelRatio(dpr); renderer.setSize(W,H,false); bgUni.res.value.set(W*dpr,H*dpr);
