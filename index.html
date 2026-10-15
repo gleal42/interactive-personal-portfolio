@@ -772,7 +772,17 @@ function applyRig(spec){                 // shared: body, then legs and arms sol
     arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
     solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
 }
-function poseIntro(ti,clock){
+// while he is completely hidden inside the cloud the climb runs faster (nobody sees it), so he can
+// start deep in the cloud and still reach the cage in a reasonable time
+const HIDDEN_SPEED=4, MAX_CLIMB=21;
+let warpT=null, warpI=null;           // real seconds -> intro seconds, built in layout()
+function warpIntro(ti){
+  if(!warpT||ti<=0) return ti;
+  const n=warpT.length-1; if(ti>=warpT[n]) return warpI[n]+(ti-warpT[n]);
+  let lo=0,hi=n; while(hi-lo>1){const m=(lo+hi)>>1; if(warpT[m]<=ti)lo=m; else hi=m;}
+  return mix(warpI[lo],warpI[hi],(ti-warpT[lo])/(warpT[hi]-warpT[lo]));}
+const poseIntro=(ti,clock)=>poseIntroAt(warpIntro(ti),clock);
+function poseIntroAt(ti,clock){
   const tA=climbEnd();
   if(ti<tA){                                   // climbing, seen from behind
     const tau=tauOf(ti), y=yLin(tau), bob=4*Math.sin(tau/CLIMB_P*Math.PI*4-1.2)*clamp01((tauEnd()-tau)/(.7*CLIMB_P));   // rises in small surges with each leg push
@@ -829,7 +839,10 @@ function layout(){
     const hidden=y=>{const r=Math.round((y-cl.y)/cs/2); return r>=0&&r*2<590&&(y>H-ramp||frontCol[r]>.6);};   // inside the cloud, in front
     const covered=c=>{for(let u=c-30;u<=c+200;u+=5) if(!hidden(sy-u*upx)) return false; return true;};   // feet to head
     climbStart=FLOOR-2*RUNG*nOf(Math.min(1000,depth+40));                  // fallback: the old start
-    for(let n=6;n<=nOf(Math.min(1600,depth+260));n++) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // the first hidden start below the cage
+    for(let n=nOf(Math.min(2000,depth+260));n>=6;n--) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // the deepest hidden start
+    warpT=[0]; warpI=[0]; const dt=.02, tA=climbEnd();
+    for(let t=0;t<tA;t+=dt){const sp=covered(climbY(t))?HIDDEN_SPEED:1; warpT.push(warpT[warpT.length-1]+dt/sp); warpI.push(t+dt);}
+    const total=warpT[warpT.length-1], f=Math.min(1,MAX_CLIMB/total); if(f<1) warpT=warpT.map(t=>t*f);   // big screens: a brisker climb, at most MAX_CLIMB s
     climbSet=true;}
   ladderClip.constant=-(stage.position.y+(climbStart-30)*unit);
   // sun shadows cover the cage
@@ -916,7 +929,7 @@ Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_fr
   window.__seek=(t,clock=10)=>{const now=clock*1000; mode="main"; t0=t===null?null:now-t*1000; frame(now);};
   window.__seekIntro=(ti,clock=10)=>{const now=clock*1000; mode="intro"; introStart=now-ti*1000; frame(now);};
   window.__ladderFall=(ti,u)=>{window.__seekIntro(ti); captureLadderFall(ti,10); mode="ladderFall"; fallStart=10000-u*1000; frame(10000);};
-  window.__dbg={camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,tauEnd()]};
+  window.__dbg={camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
   window.__ready=true;
 });
 {const ro=new ResizeObserver(()=>layout()); ro.observe(stageEl); ro.observe(skyEl);}

@@ -23,7 +23,9 @@ The page opens with him climbing the ladder toward the cage.
   cloud, warm haze below, deeper again behind *about*), with a little light around the cloud and film grain.
 - **In and out of the cloud**: the cloud's brighter, nearer puffs (`assets/clouds_front.png`, made by
   `tools/clouds_front.py`) are drawn again on top of the 3D scene, so the ladder dips behind them and the man
-  climbs out of the cloud and falls back into it. The ladder ends, and the climb starts, inside one of them.
+  climbs out of the cloud and falls back into it. Along the ladder the behind/in-front stretches are set by hand
+  (`BEHIND` in `tools/clouds_front.py`) and switch at puff edges. The ladder ends, and the climb starts, inside the
+  cloud; the climb runs faster while he is completely hidden (`HIDDEN_SPEED`) and is capped at `MAX_CLIMB` seconds.
 - **Cage, chain, ladder and the man** are drawn live in 3D with [three.js](https://threejs.org) (r160, loaded from jsDelivr).
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
 - **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
