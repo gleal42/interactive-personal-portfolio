@@ -6,8 +6,9 @@ The page draws the cloud twice: once behind the 3D scene and once, masked by thi
 The matte picks the brighter, bulging puffs (brighter than their surroundings at the puff scale), which
 read as the nearer ones, so the ladder and the man go behind them and come out in the shadowed gaps.
 Along the ladder's column (under the peak) the threshold is lowered for longer stretches, a little more
-where the climb starts so he can start hidden, and the top turret is in front so the ladder goes down
-into the cloud from its very top. Saved at half size: it is soft anyway.
+where the climb starts so he can start hidden. Above that (the top of the cloud down to row ~205) the
+ladder and the man stay in front: the matte is cleared in a soft strip around the ladder there.
+Saved at half size: it is soft anyway.
 Needs: numpy, opencv-python, pillow.
 """
 import sys
@@ -33,9 +34,11 @@ start = np.exp(-((yy - 260) / 60) ** 4)
 t = -.02 - .035 * near - .08 * near * start
 m = np.clip((loc - t) / .04, 0, 1)
 m = m * m * (3 - 2 * m)
-turret = np.exp(-(((xx - PEAK_X) / 26) ** 2 + ((yy - 34) / 34) ** 2))
-m = np.maximum(m, np.clip(turret * 1.6, 0, 1))
 m = cv2.GaussianBlur(m, (0, 0), 2.5) * np.clip((a - .5) / .4, 0, 1)
+# ladder and man in front from the top of the cloud down to the stretch where the climb starts
+strip = np.clip((70 - np.abs(xx - PEAK_X)) / 30, 0, 1)
+top = np.clip((215 - yy) / 20, 0, 1)
+m *= 1 - strip * top
 
 half = cv2.resize(m, ((W + 1) // 2, (H + 1) // 2), interpolation=cv2.INTER_AREA)
 Image.fromarray((half * 255).astype(np.uint8)).save(dst, optimize=True)
