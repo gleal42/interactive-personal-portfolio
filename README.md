@@ -16,7 +16,10 @@ The page opens with him climbing the ladder toward the cage.
 
 ## How it works
 
-- **Clouds** are a real photo (`assets/plate.jpg`), cleaned of the original cage, ladder and watermark.
+- **The sky and the cloud are separate layers.** The cloud is a real photo cut out with a soft, transparent edge
+  (`assets/clouds.webp`, made by `tools/clouds.py`) and always shown whole, so it is never cropped at the bottom.
+  The sky behind it is painted: the gradient sampled from the same photo (dark at the top, lighter toward the
+  cloud, warm haze below), with a little light around the cloud and film grain on top.
 - **Cage, chain, ladder and the man** are drawn live in 3D with [three.js](https://threejs.org) (r160, loaded from jsDelivr).
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
 - **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
@@ -53,9 +56,9 @@ The site appears at `https://<username>.github.io/<repository>/`.
 
 ```
 index.html           the homepage (HTML, CSS and the three.js scene in one file)
-assets/              cloud background and face textures
+assets/              the cut-out cloud and face textures
 style-guide/         the visual style guide (palette, type, motifs, generator prompt)
-tools/               Python scripts used to clean the cloud plate and build the face textures
+tools/               Python scripts: cut out the cloud (clouds.py), build the face textures, and the old plate clean-up
 ```
 
 ## Tweaking
@@ -65,7 +68,9 @@ Most things are a single constant near the top of the script in `index.html`:
 | What | Constant |
 |---|---|
 | Cage size on wide screens / phones | `CAGE_SCALE_WIDE`, `CAGE_SCALE_TALL` |
-| Cage position on the photo | `ANCHOR` |
+| Cage position | `SKY.ANCHOR` |
+| Where the cloud sits under the cage, and the gap | `SKY.SEAT`, `SKY.GAP` |
+| Sky colours | `skyRow()` in the background shader |
 | Man's size | `FIG_S` |
 | Bar thickness | `THICK` |
 | Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
