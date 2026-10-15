@@ -17,9 +17,15 @@ The page opens with him climbing the ladder toward the cage.
 ## How it works
 
 - **The sky and the cloud are separate layers.** The cloud is a real photo cut out with a soft, transparent edge
-  (`assets/clouds.webp`, made by `tools/clouds.py`) and always shown whole, so it is never cropped at the bottom.
+  (`assets/clouds.webp`, made by `tools/clouds.py`). Its peak sits right under the cage; it is big, runs off the
+  right edge and continues below the fold, so scrolling down to *about* reveals the rest of it.
   The sky behind it is painted: the gradient sampled from the same photo (dark at the top, lighter toward the
-  cloud, warm haze below), with a little light around the cloud and film grain on top.
+  cloud, warm haze below, deeper again behind *about*), with a little light around the cloud and film grain.
+- **In and out of the cloud**: the cloud's brighter, nearer puffs (`assets/clouds_front.png`, made by
+  `tools/clouds_front.py`) are drawn again on top of the 3D scene, so the ladder dips behind them and the man
+  climbs out of the cloud and falls back into it. Along the ladder the behind/in-front stretches are set by hand
+  (`BEHIND` in `tools/clouds_front.py`) and switch at puff edges. The ladder ends, and the climb starts, inside the
+  cloud; the climb runs faster while he is completely hidden (`HIDDEN_SPEED`) and is capped at `MAX_CLIMB` seconds.
 - **Cage, chain, ladder and the man** are drawn live in 3D with [three.js](https://threejs.org) (r160, loaded from jsDelivr).
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
 - **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
@@ -58,7 +64,7 @@ The site appears at `https://<username>.github.io/<repository>/`.
 index.html           the homepage (HTML, CSS and the three.js scene in one file)
 assets/              the cut-out cloud and face textures
 style-guide/         the visual style guide (palette, type, motifs, generator prompt)
-tools/               Python scripts: cut out the cloud (clouds.py), build the face textures, and the old plate clean-up
+tools/               Python scripts: cut out the cloud (clouds.py), its front puffs (clouds_front.py), the face textures, the old plate clean-up
 ```
 
 ## Tweaking
@@ -69,7 +75,7 @@ Most things are a single constant near the top of the script in `index.html`:
 |---|---|
 | Cage size on wide screens / phones | `CAGE_SCALE_WIDE`, `CAGE_SCALE_TALL` |
 | Cage position | `SKY.ANCHOR` |
-| Where the cloud sits under the cage, and the gap | `SKY.SEAT`, `SKY.GAP` |
+| The cloud's peak under the cage, the gap, its size | `SKY.PEAK`, `SKY.GAP`, `skyLayout()` |
 | Sky colours | `skyRow()` in the background shader |
 | Man's size | `FIG_S` |
 | Bar thickness | `THICK` |
