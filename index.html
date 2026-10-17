@@ -28,8 +28,9 @@ body{background:var(--sky);color:var(--cloud);font-family:var(--serif);overflow-
    which is big enough to run off the right edge and below the fold, so scrolling down reveals the rest of it.
    This CSS version shows while the 3D scene loads; the canvas then redraws the same thing on top
    (--cx/--cy/--cw/--fold are set from skyLayout()). */
-.sky{position:relative;overflow:hidden;--cx:52vw;--cy:30vh;--cw:150vh;--fold:100svh;
+.sky{position:relative;overflow:hidden;--cx:52vw;--cy:30vh;--cw:150vh;--sx:80vw;--sy:10vh;--sw:20vh;--fold:100svh;
   background:
+    url("assets/cloud_small.webp") var(--sx) var(--sy)/var(--sw) auto no-repeat,
     url("assets/clouds.webp") var(--cx) var(--cy)/var(--cw) auto no-repeat,
     linear-gradient(180deg,#1a3a4b 0%,#28546a 30%,#3b6c80 55%,#56808c 78%,#69808a 100%) 0 0/100% var(--fold) no-repeat,
     linear-gradient(180deg,#69808a 0%,#2a5462 60%,#1d414c 100%) 0 var(--fold)/100% calc(100% - var(--fold)) no-repeat var(--sky-deep)}
@@ -128,7 +129,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 <body>
 
 <div class="sky" id="sky">
-<canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder out of a fog bank into an old bronze birdcage hanging in the sky. When you open the door, he crouches in the doorway and leaps across the open sky onto a sunlit cloud."></canvas>
+<canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a shaded cloud into an old bronze birdcage hanging in the sky. When you open the door, he crouches in the doorway and leaps across to a small cloud still in the sunlight."></canvas>
 <div class="stage" id="stage">
   <nav>
     <a href="#top">home</a>
@@ -160,26 +161,33 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 <script>
 /* Where the cage and the cloud go, shared by the CSS preview (runs at once) and the 3D scene.
    Units: px of a 1280x720 layout frame, fitted to the screen like the old background photo. */
-const SKY={PW:1280,PH:720,
+const SKY={PW:1280,PH:720,ANCHOR:{x:1007,y:148},   // ANCHOR: where the cage base sits in the frame
   CW:988,CH:643,                     // assets/clouds.webp, px
   ROW0:764,                          // photo row of the cut-out's first row (for the sky gradient)
-  PEAK:{x:438,y:9},                  // the very top of the cloud (cut-out px)
-  LAND:{x:440,y:22}};                // where his feet come down on it, just inside the top edge
-/* Two places: a cool fog bank along the bottom (the ladder rises out of it) and one sunlit cloud to the
-   right of the cage, a little lower, with open sky in between. He climbs out of the fog and leaps to the cloud. */
+  PEAK:{x:438,y:9},                  // the very top of the cloud, centred under the cage (cut-out px)
+  GAP:44,                            // frame px between the cage base and the peak
+  SM:{W:220,H:164,LAND:{x:101,y:40}}};   // assets/cloud_small.webp (made by tools/cloud_small.py) and where he lands on it
+/* Two clouds, told apart by light: the big one under the cage is in shade (he climbs up through it), and a small one
+   up to the right is still in the sun. He leaps from the cage across and slightly up, onto the sunlit one. */
 function skyLayout(W,H){             // H = height of the first screen
   const portrait=W/H<=1, shortWide=!portrait&&H<560;
-  let bw=W,bh=H; if(portrait)bh=H*.62; else if(shortWide)bw=W*.66;
-  const k=Math.max(bw/SKY.PW,bh/SKY.PH);
-  const sx=portrait?W*.34:shortWide?W*.56:W*.57, sy=portrait?H*.5:shortWide?H*.3:H*.2;   // cage base
-  const w=portrait?W*1.05:shortWide?H*1.05:H*.9, s=w/SKY.CW;                          // the destination cloud
-  const px=portrait?W*.8:shortWide?W*.83:sx+W*.22, py=sy+(portrait?H*.07:H*.1);       // its peak
-  const fogTop=H*(portrait?.8:.64), fogSolid=H*(portrait?.94:.86);   // wide screens: the cloud's broad base sinks into the fog
-  const cloud={x:px-SKY.PEAK.x*s,y:py-SKY.PEAK.y*s,w,h:SKY.CH*s};
-  return {portrait,shortWide,k,sx,sy,fogTop,fogSolid,cloud,land:{x:cloud.x+SKY.LAND.x*s,y:cloud.y+SKY.LAND.y*s}};
+  let bx=0,by=0,bw=W,bh=H,px=.72,py=.5;
+  if(portrait){by=H*.38;bh=H*.62;px=.85;py=1;}
+  else if(shortWide){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the cloud to the right of the text
+  const k=Math.max(bw/SKY.PW,bh/SKY.PH), x0=bx+(bw-SKY.PW*k)*px, y0=by+(bh-SKY.PH*k)*py;
+  // the cage sits a little left of where it used to, to leave sky on its right for the small cloud
+  const sx=portrait?W*.42:shortWide?x0+880*k:Math.min(x0+SKY.ANCHOR.x*k,W*.64), sy=y0+(SKY.ANCHOR.y+(portrait?60:shortWide?95:0))*k;
+  // the big cloud's peak sits right under the cage; it runs off the right edge and below the fold
+  const w=portrait?W*1.6:H*1.3, s=w/SKY.CW;
+  const cloud={x:sx-SKY.PEAK.x*s,y:sy+SKY.GAP*k-SKY.PEAK.y*s,w,h:SKY.CH*s};
+  // the small cloud: up and to the right of the cage, its top a little above the cage floor
+  const sw=portrait?W*.36:H*.22, ss=sw/SKY.SM.W;
+  const lx=Math.min(sx+(portrait?W*.36:H*.36),W-sw*.6), ly=sy-H*.03;
+  const small={x:lx-SKY.SM.LAND.x*ss,y:ly-SKY.SM.LAND.y*ss,w:sw,h:SKY.SM.H*ss};
+  return {portrait,shortWide,k,sx,sy,cloud,small,land:{x:lx,y:ly}};
 }
-function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
-  p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--fold",fold);}
+function placeCloudCSS(el,L,fold){const c=L.cloud,m=L.small,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
+  p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--sx",m.x); p("--sy",m.y); p("--sw",m.w); p("--fold",fold);}
 {const sky=document.getElementById("sky"), st=document.getElementById("stage"),
   f=()=>placeCloudCSS(sky,skyLayout(st.clientWidth,st.clientHeight),st.clientHeight); f(); addEventListener("resize",f);}
 </script>
@@ -218,11 +226,18 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
    the ladder ends inside it and the man disappears into it. */
 const {CW,ROW0:CLOUD_ROW0}=SKY, CLOUD_TOP=SKY.PEAK.y;   // cloud placement lives in skyLayout(), in the script above
 const bgScene=new THREE.Scene(), fgScene=new THREE.Scene(), bgCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-const bgUni={tex:{value:null},front:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},res:{value:new THREE.Vector2(1,1)},fold:{value:1},
-  time:{value:0},fogA:{value:new THREE.Vector2(1e5,1e5)},land:{value:new THREE.Vector3(0,0,0)}};
-const BG_COMMON=`uniform sampler2D tex,front;uniform vec4 rect;uniform vec2 res;uniform float fold;
+const bgUni={tex:{value:null},front:{value:null},small:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},rect2:{value:new THREE.Vector4(-9,-9,1,1)},
+  res:{value:new THREE.Vector2(1,1)},fold:{value:1},land:{value:new THREE.Vector3(0,0,0)}};
+/* shade(): the big cloud in shadow, as if the sun had just gone behind it: cooler, less saturated, softer contrast
+   and darker, but still the same cloud (works on premultiplied colour) */
+const SHADE={DESAT:.3,FLAT:.08,TINT:"vec3(.68,.85,1.02)",DARK:.86};
+const BG_COMMON=`uniform sampler2D tex,front,small;uniform vec4 rect,rect2;uniform vec2 res;uniform float fold;
   float vig(vec2 p){vec2 q=vec2(p.x/res.x,min(p.y,fold)/fold)-.5; return 1.-.18*dot(q,q);}
-  float grain(){return (fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*.03;}`;
+  float grain(){return (fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*.03;}
+  vec3 shade(vec3 pm,float a){if(a<1e-4)return pm; vec3 c=pm/a; float l=dot(c,vec3(.3,.59,.11));
+    c=mix(c,vec3(l),${SHADE.DESAT}); c=mix(c,vec3(.45),${SHADE.FLAT}); return c*${SHADE.TINT}*${SHADE.DARK}*a;}
+  vec4 smallAt(vec2 p){vec2 u=(p-rect2.xy)/rect2.zw; if(u.x<=0.||u.x>=1.||u.y<=0.||u.y>=1.)return vec4(0.);
+    vec4 k=texture2D(small,vec2(u.x,1.-u.y)); k.rgb*=vec3(1.07,1.02,.95); return k;}   // a touch warmer: it is in the sun`;
 const quad=(frag,extra={})=>new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
   uniforms:bgUni,depthTest:false,depthWrite:false,...extra,
   vertexShader:"void main(){gl_Position=vec4(position.xy,0.,1.);}",fragmentShader:BG_COMMON+frag}));
@@ -242,34 +257,28 @@ bgScene.add(quad(`
     vec3 c=skyRow(clamp(y,0.,1536.));
     c*=.95+.09*smoothstep(0.,1.,p.x/res.x);                 // the sun side is a little brighter
     c=mix(c,vec3(29,65,76)/255.,smoothstep(fold,res.y,p.y)*.9);   // deeper sky behind the about section
-    vec2 d=(p-(rect.xy+rect.zw*vec2(.45,.4)))/(rect.zw*vec2(.6,.7));
-    c+=vec3(.04,.04,.03)*exp(-dot(d,d));                     // soft light around the cloud
+    vec2 d=(p-(rect2.xy+rect2.zw*vec2(.48,.5)))/(rect2.zw*vec2(1.1,1.0));
+    c+=vec3(.11,.075,.04)*exp(-dot(d,d)*1.4);                // warm light around the small, sunlit cloud
     vec2 uv=(p-rect.xy)/rect.zw;
-    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); c=c*(1.-k.a)+k.rgb;}   // premultiplied
+    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); c=c*(1.-k.a)+shade(k.rgb,k.a);}   // premultiplied
+    vec4 m=smallAt(p); c=c*(1.-m.a)+m.rgb;
     gl_FragColor=vec4(c*vig(p)+grain(),1.);}`));
-/* in front of the 3D scene: the fog bank the ladder rises out of, and a little of the sunlit cloud drawn again
-   just below his landing spot, so his feet settle into it instead of standing on top of the picture */
+/* in front of the 3D scene: the big cloud's brighter, nearer puffs again (so the ladder and the man pass behind
+   them), the whole cloud below the fold, and a little of the small cloud just below his landing spot, so his feet
+   settle into it instead of standing on top of the picture */
 fgScene.add(quad(`
-  uniform float time;uniform vec2 fogA;uniform vec3 land;
-  float hsh(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-  float vn(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
-    return mix(mix(hsh(i),hsh(i+vec2(1,0)),u.x),mix(hsh(i+vec2(0,1)),hsh(i+vec2(1,1)),u.x),u.y);}
-  float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*vn(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return s;}
+  uniform vec3 land;
   void main(){vec2 p=vec2(gl_FragCoord.x,res.y-gl_FragCoord.y), uv=(p-rect.xy)/rect.zw;
-    vec4 under=vec4(0.);
-    if(land.z>0.&&uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){
-      float m=smoothstep(land.y-land.z*.08,land.y+land.z*.1,p.y)*(1.-smoothstep(land.z*.55,land.z,abs(p.x-land.x)));
-      vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); under=vec4(k.rgb*vig(p)+grain()*k.a,k.a)*m;}
-    // fog: a soft, slowly drifting edge, cool grey-teal, getting denser and darker toward the fold
-    vec2 q=p/fold;
-    float n=fbm(q*vec2(2.4,5.)+vec2(time*.010,0.)), n2=fbm(q*vec2(6.,11.)-vec2(time*.018,time*.004));
-    float band=fogA.y-fogA.x, edge=fogA.x+band*(.3+1.1*(n-.5)+.45*(n2-.5));
-    float a=smoothstep(edge-band*.2,edge+band*.55,p.y);
-    a=max(a,smoothstep(fogA.y,fold,p.y));
-    vec3 c=mix(vec3(98,124,128)/255.,vec3(48,66,72)/255.,smoothstep(fogA.x,fold*1.04,p.y))+(n2-.5)*.07;
-    c=mix(c,vec3(29,65,76)/255.,smoothstep(fold,fold+(res.y-fold)*.7,p.y));   // below the fold it becomes the deep sky
-    c=c*vig(p)+grain();
-    gl_FragColor=vec4(c*a,a)+under*(1.-a);}`,
+    vec4 o=vec4(0.);
+    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){
+      vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y));
+      float m=max(texture2D(front,vec2(uv.x,1.-uv.y)).r, smoothstep(fold-.07*(fold-rect.y),fold,p.y));
+      o=vec4(shade(k.rgb,k.a)*vig(p)+grain()*k.a,k.a)*m;}
+    if(land.z>0.){
+      float m=smoothstep(land.y-land.z*.06,land.y+land.z*.12,p.y)*(1.-smoothstep(land.z*.5,land.z,abs(p.x-land.x)));
+      vec4 k=smallAt(p)*m; k.rgb=k.rgb*vig(p)+grain()*k.a; o=k+o*(1.-k.a);}
+    if(o.a<=0.) discard;
+    gl_FragColor=o;}`,
   {transparent:true,blending:THREE.CustomBlending,blendSrc:THREE.OneFactor,blendDst:THREE.OneMinusSrcAlphaFactor,
    blendSrcAlpha:THREE.OneFactor,blendDstAlpha:THREE.OneMinusSrcAlphaFactor}));
 
@@ -684,7 +693,7 @@ let rel=null;
 /* ---------- the leap: from the doorway across open sky to the sunlit cloud, then he lands and stands up ----------
    His hips follow a slow ballistic arc (low gravity: weightless, never dramatic) from where he pushed off to just
    above the landing spot, which layout() places on the cloud's peak, a little farther from the camera. */
-const LEAP_G=300, LEAP_APEX=55, LAND_Z=-600, LAND_YAW=.45;
+const LEAP_G=300, LEAP_APEX=55, LAND_Z=-250, LAND_YAW=.45;
 let LAND=null;                                   // the landing spot in stage units, set in layout()
 function legsFK(a,spread){                       // both legs bent by a (0 = straight); returns the hip height
   for(const [leg,side] of [[L.leg,1],[Rt.leg,-1]]){
@@ -901,6 +910,7 @@ function layout(){
   const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
   renderer.setPixelRatio(dpr); renderer.setSize(W,HT,false); bgUni.res.value.set(W*dpr,HT*dpr); bgUni.fold.value=H*dpr;
   bgUni.rect.value.set(cl.x*dpr,cl.y*dpr,cl.w*dpr,cl.h*dpr); placeCloudCSS(skyEl,L,H);
+  const sm=L.small; bgUni.rect2.value.set(sm.x*dpr,sm.y*dpr,sm.w*dpr,sm.h*dpr);
   // the camera frames the first screen exactly as before; a view offset extends the picture downward
   const full=2*HT-H, D=3000, Hw=2*D*Math.tan(THREE.MathUtils.degToRad(FOV/2));
   camera.fov=2*THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV/2))*full/H));
@@ -909,17 +919,17 @@ function layout(){
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
   const upx=unit*H/Hw;                                                       // screen px per cage unit
-  bgUni.fogA.value.set(L.fogTop*dpr,L.fogSolid*dpr);
-  // the landing spot: the screen point on the cloud's peak, carried into the stage at LAND_Z (a little farther away)
+  // the landing spot: the screen point on the small cloud's top, carried into the stage at LAND_Z (a little farther away)
   {camera.updateMatrixWorld(true); stage.updateMatrixWorld(true);
    const d=new THREE.Vector3(L.land.x/W*2-1,1-L.land.y/HT*2,.5).unproject(camera).sub(camera.position).normalize();
    const zW=LAND_Z*unit, P=camera.position.clone().addScaledVector(d,(zW-camera.position.z)/d.z);
    LAND=stage.worldToLocal(P);
    const sc=camera.position.z/(camera.position.z-zW);                       // he looks a little smaller over there
    bgUni.land.value.set(L.land.x*dpr,(L.land.y-3*upx*sc)*dpr,26*upx*sc*dpr);}
-  if(!climbSet){
+  if(!climbSet&&frontCol){
     const depth=(stage.position.y+Hw/2)/unit, nOf=d=>Math.ceil((FLOOR+d)/(2*RUNG));
-    const hidden=y=>y>L.fogSolid+.02*H;                                      // inside the fog
+    const cs=cl.w/SKY.CW, ramp=.035*(H-cl.y);                                 // screen px per cut-out px
+    const hidden=y=>{const r=Math.round((y-cl.y)/cs/2); return r>=0&&r*2<590&&(y>H-ramp||frontCol[r]>.6);};   // inside the cloud, in front
     const covered=c=>{for(let u=c-30;u<=c+200;u+=5) if(!hidden(sy-u*upx)) return false; return true;};   // feet to head
     climbStart=FLOOR-2*RUNG*nOf(Math.min(1000,depth+40));                  // fallback: the old start
     for(let n=nOf(Math.min(2000,depth+260));n>=6;n--) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // the deepest hidden start
@@ -986,7 +996,6 @@ function frame(now){
   finishFrame(now);
 }
 function finishFrame(now){
-  bgUni.time.value=now/1000;
   const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
   if(!window.__manual) smoothPose(dt);
   renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
@@ -994,7 +1003,13 @@ function finishFrame(now){
 
 /* ---------- boot ---------- */
 const ldr=new THREE.TextureLoader();
-Promise.all([ldr.loadAsync("assets/clouds.webp")]).then(([tex])=>{
+Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_front.png"),ldr.loadAsync("assets/cloud_small.webp")]).then(([tex,front,small])=>{
+  front.colorSpace=THREE.NoColorSpace; bgUni.front.value=front;
+  small.colorSpace=THREE.NoColorSpace; small.premultiplyAlpha=true; small.minFilter=THREE.LinearMipmapLinearFilter; bgUni.small.value=small;
+  {const im=front.image, c=document.createElement("canvas"); c.width=im.width; c.height=im.height;
+   const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(im,0,0);
+   const x=Math.round(SKY.PEAK.x/SKY.CW*im.width), d=g.getImageData(x,0,1,im.height).data;
+   frontCol=Array.from({length:im.height},(_,i)=>d[i*4]/255);}
   tex.colorSpace=THREE.NoColorSpace; tex.premultiplyAlpha=true; tex.minFilter=THREE.LinearMipmapLinearFilter; bgUni.tex.value=tex;
   // reflections on the cage: the same sky with the cloud below the horizon
   const ec=document.createElement("canvas"); ec.width=1024; ec.height=512; const g=ec.getContext("2d");
@@ -1021,7 +1036,7 @@ document.getElementById("letgo").addEventListener("click",()=>{
   if(mode==="main"&&t0!==null) return;
   t0=reduce?now-30000:now; released=false; cage.add(fig); armCap=null; rel=null; smoothState=null;
 });
-document.getElementById("again").addEventListener("click",()=>{   // back to the start: the climb out of the fog
+document.getElementById("again").addEventListener("click",()=>{   // back to the start: the climb up through the cloud
   const now=performance.now(); stageEl.classList.remove("played","landed","waiting");
   mode=reduce?"main":"intro"; introStart=now; cage.add(fig); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null;
 });
