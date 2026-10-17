@@ -92,11 +92,14 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 .hint{margin-top:28px;font-size:1rem;font-style:italic;color:var(--cloud-dim);opacity:0;animation:rise 1s ease 1.4s forwards}
 .played .hint{visibility:hidden}
 
-#about{position:relative;z-index:2;padding:clamp(64px,10vw,120px) clamp(16px,5vw,64px)}
-#about .inner{max-width:38rem;display:grid;gap:18px}
-#about h2{margin:0;font-weight:600;font-size:clamp(1.8rem,3vw,2.4rem)}
-#about p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
-#about small{font-size:.95rem;color:var(--gold);font-style:italic}
+.sec{position:relative;z-index:2;padding:clamp(56px,8vw,96px) clamp(16px,5vw,64px)}
+#work{padding-top:clamp(64px,10vw,120px)}
+.sec .inner{max-width:38rem;display:grid;gap:18px}
+.sec h2{margin:0;font-weight:600;font-size:clamp(1.8rem,3vw,2.4rem)}
+.sec p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
+/* the tabs, right; the shirt logo, left */
+nav .links{display:flex;gap:clamp(14px,2.6vw,36px)}
+nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
 
 /* phones held sideways: compact quote sized to the screen height, clouds pushed to the right */
 @media (min-aspect-ratio:1/1) and (max-height:560px){
@@ -137,7 +140,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 <div class="stage" id="stage">
   <nav>
     <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="56" height="56"></a>
-    <a href="#about">about</a>
+    <div class="links"><a href="#work">work</a><a href="#services">services</a><a href="#about">about</a><a href="#contact">contact</a></div>
   </nav>
   <div class="copy" id="top">
     <div class="intro">
@@ -147,16 +150,33 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
     </div>
     <div class="reveal" aria-live="polite">
       <h1><span class="w">The door</span> <span class="w">was never</span> <span class="w">locked.</span></h1>
-      <p class="after"><a href="#about">see what I build</a><span aria-hidden="true"> · </span><button id="again" type="button">watch again</button></p>
+      <p class="after"><a href="#work">see what I build</a><span aria-hidden="true"> · </span><button id="again" type="button">watch again</button></p>
     </div>
   </div>
 </div>
 
-<section id="about">
+<section id="work" class="sec">
+  <div class="inner">
+    <h2>work</h2>
+    <p>[Placeholder] Three to five projects, each told the same way: what was stuck, what you built, what changed.</p>
+  </div>
+</section>
+<section id="services" class="sec">
+  <div class="inner">
+    <h2>services</h2>
+    <p>[Placeholder] Two or three clear offers: what you do, for whom, and what they get.</p>
+  </div>
+</section>
+<section id="about" class="sec">
   <div class="inner">
     <h2>about</h2>
     <p>This is where your story goes: who you are, what you left behind, and what you're building now.</p>
-    <small>Quote often attributed to Joseph Campbell.</small>
+  </div>
+</section>
+<section id="contact" class="sec">
+  <div class="inner">
+    <h2>contact</h2>
+    <p>[Placeholder] One clear way to reach you: an email address or a short form.</p>
   </div>
 </section>
 </div>
@@ -671,7 +691,7 @@ let rel=null;
 
 /* ---------- the red balloon: tied to the cage's top ring by the door, bobbing above it the whole time ----------
    It lives in the stage (not the cage) so it can leave with him; before that it is pinned to the knot on the ring. */
-const BAL={R:44, SLACK:85, OFF:V3(92,96,34)};      // OFF: leaning out to the right in a breeze, in view beside the cage
+const BAL={R:44, SLACK:85, OFF:V3(104,34,34)};     // OFF: out to the right in a breeze, beside the cage and clear of the menu
 const balM=new THREE.MeshPhysicalMaterial({color:0xb02f26,roughness:.3,metalness:0,clearcoat:.9,clearcoatRoughness:.2,sheen:.4,sheenColor:new THREE.Color(0xff9a80),envMapIntensity:.9});
 const strM=new THREE.MeshStandardMaterial({color:0xece2d4,roughness:.8});
 const bal=new THREE.Group();                          // origin at the knot, +y up through the balloon
