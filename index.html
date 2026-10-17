@@ -28,9 +28,8 @@ body{background:var(--sky);color:var(--cloud);font-family:var(--serif);overflow-
    which is big enough to run off the right edge and below the fold, so scrolling down reveals the rest of it.
    This CSS version shows while the 3D scene loads; the canvas then redraws the same thing on top
    (--cx/--cy/--cw/--fold are set from skyLayout()). */
-.sky{position:relative;overflow:hidden;--cx:52vw;--cy:30vh;--cw:150vh;--sx:80vw;--sy:10vh;--sw:20vh;--fold:100svh;
+.sky{position:relative;overflow:hidden;--cx:52vw;--cy:30vh;--cw:150vh;--fold:100svh;
   background:
-    url("assets/cloud_small.webp") var(--sx) var(--sy)/var(--sw) auto no-repeat,
     url("assets/clouds.webp") var(--cx) var(--cy)/var(--cw) auto no-repeat,
     linear-gradient(180deg,#1a3a4b 0%,#28546a 30%,#3b6c80 55%,#56808c 78%,#69808a 100%) 0 0/100% var(--fold) no-repeat,
     linear-gradient(180deg,#69808a 0%,#2a5462 60%,#1d414c 100%) 0 var(--fold)/100% calc(100% - var(--fold)) no-repeat var(--sky-deep)}
@@ -129,7 +128,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 <body>
 
 <div class="sky" id="sky">
-<canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a shaded cloud into an old bronze birdcage hanging in the sky. When you open the door, he crouches in the doorway and leaps across to a small cloud still in the sunlight."></canvas>
+<canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a cloud into an old bronze birdcage hanging in the sky. When you open the door, he takes the umbrella hanging on the cage, leaps out, opens it and floats down, swaying gently, beside the page as you scroll."></canvas>
 <div class="stage" id="stage">
   <nav>
     <a href="#top">home</a>
@@ -165,29 +164,21 @@ const SKY={PW:1280,PH:720,ANCHOR:{x:1007,y:148},   // ANCHOR: where the cage bas
   CW:988,CH:643,                     // assets/clouds.webp, px
   ROW0:764,                          // photo row of the cut-out's first row (for the sky gradient)
   PEAK:{x:438,y:9},                  // the very top of the cloud, centred under the cage (cut-out px)
-  GAP:44,                            // frame px between the cage base and the peak
-  SM:{W:220,H:164,LAND:{x:101,y:40}}};   // assets/cloud_small.webp (made by tools/cloud_small.py) and where he lands on it
-/* Two clouds, told apart by light: the big one under the cage is in shade (he climbs up through it), and a small one
-   up to the right is still in the sun. He leaps from the cage across and slightly up, onto the sunlit one. */
+  GAP:44};                           // frame px between the cage base and the peak
 function skyLayout(W,H){             // H = height of the first screen
   const portrait=W/H<=1, shortWide=!portrait&&H<560;
   let bx=0,by=0,bw=W,bh=H,px=.72,py=.5;
   if(portrait){by=H*.38;bh=H*.62;px=.85;py=1;}
-  else if(shortWide){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the cloud to the right of the text
+  else if(shortWide){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the cloud to the right of the quote
   const k=Math.max(bw/SKY.PW,bh/SKY.PH), x0=bx+(bw-SKY.PW*k)*px, y0=by+(bh-SKY.PH*k)*py;
-  // the cage sits a little left of where it used to, to leave sky on its right for the small cloud
-  const sx=portrait?W*.42:shortWide?x0+880*k:Math.min(x0+SKY.ANCHOR.x*k,W*.64), sy=y0+(SKY.ANCHOR.y+(portrait?60:shortWide?95:0))*k;
-  // the big cloud's peak sits right under the cage; it runs off the right edge and below the fold
-  const w=portrait?W*1.6:H*1.3, s=w/SKY.CW;
-  const cloud={x:sx-SKY.PEAK.x*s,y:sy+SKY.GAP*k-SKY.PEAK.y*s,w,h:SKY.CH*s};
-  // the small cloud: up and to the right of the cage, its top a little above the cage floor
-  const sw=portrait?W*.36:H*.22, ss=sw/SKY.SM.W;
-  const lx=Math.min(sx+(portrait?W*.36:H*.36),W-sw*.6), ly=sy-H*.03;
-  const small={x:lx-SKY.SM.LAND.x*ss,y:ly-SKY.SM.LAND.y*ss,w:sw,h:SKY.SM.H*ss};
-  return {portrait,shortWide,k,sx,sy,cloud,small,land:{x:lx,y:ly}};
+  const sx=portrait?W*.65:x0+SKY.ANCHOR.x*k, sy=y0+(SKY.ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
+  // the cloud's peak sits right under the cage; the cloud is big and may run off the right edge and below
+  // the fold (scrolling reveals the rest of it)
+  const w=portrait?W*1.6:H*1.5, s=w/SKY.CW;
+  return {portrait,shortWide,k,sx,sy,cloud:{x:sx-SKY.PEAK.x*s,y:sy+SKY.GAP*k-SKY.PEAK.y*s,w,h:SKY.CH*s}};
 }
-function placeCloudCSS(el,L,fold){const c=L.cloud,m=L.small,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
-  p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--sx",m.x); p("--sy",m.y); p("--sw",m.w); p("--fold",fold);}
+function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
+  p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--fold",fold);}
 {const sky=document.getElementById("sky"), st=document.getElementById("stage"),
   f=()=>placeCloudCSS(sky,skyLayout(st.clientWidth,st.clientHeight),st.clientHeight); f(); addEventListener("resize",f);}
 </script>
@@ -226,18 +217,10 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
    the ladder ends inside it and the man disappears into it. */
 const {CW,ROW0:CLOUD_ROW0}=SKY, CLOUD_TOP=SKY.PEAK.y;   // cloud placement lives in skyLayout(), in the script above
 const bgScene=new THREE.Scene(), fgScene=new THREE.Scene(), bgCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-const bgUni={tex:{value:null},front:{value:null},small:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},rect2:{value:new THREE.Vector4(-9,-9,1,1)},
-  res:{value:new THREE.Vector2(1,1)},fold:{value:1},land:{value:new THREE.Vector3(0,0,0)}};
-/* shade(): the big cloud in shadow, as if the sun had just gone behind it: cooler, less saturated, softer contrast
-   and darker, but still the same cloud (works on premultiplied colour) */
-const SHADE={DESAT:.3,FLAT:.08,TINT:"vec3(.68,.85,1.02)",DARK:.86};
-const BG_COMMON=`uniform sampler2D tex,front,small;uniform vec4 rect,rect2;uniform vec2 res;uniform float fold;
+const bgUni={tex:{value:null},front:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},res:{value:new THREE.Vector2(1,1)},fold:{value:1}};
+const BG_COMMON=`uniform sampler2D tex,front;uniform vec4 rect;uniform vec2 res;uniform float fold;
   float vig(vec2 p){vec2 q=vec2(p.x/res.x,min(p.y,fold)/fold)-.5; return 1.-.18*dot(q,q);}
-  float grain(){return (fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*.03;}
-  vec3 shade(vec3 pm,float a){if(a<1e-4)return pm; vec3 c=pm/a; float l=dot(c,vec3(.3,.59,.11));
-    c=mix(c,vec3(l),${SHADE.DESAT}); c=mix(c,vec3(.45),${SHADE.FLAT}); return c*${SHADE.TINT}*${SHADE.DARK}*a;}
-  vec4 smallAt(vec2 p){vec2 u=(p-rect2.xy)/rect2.zw; if(u.x<=0.||u.x>=1.||u.y<=0.||u.y>=1.)return vec4(0.);
-    vec4 k=texture2D(small,vec2(u.x,1.-u.y)); k.rgb*=vec3(1.07,1.02,.95); return k;}   // a touch warmer: it is in the sun`;
+  float grain(){return (fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*.03;}`;
 const quad=(frag,extra={})=>new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
   uniforms:bgUni,depthTest:false,depthWrite:false,...extra,
   vertexShader:"void main(){gl_Position=vec4(position.xy,0.,1.);}",fragmentShader:BG_COMMON+frag}));
@@ -257,28 +240,17 @@ bgScene.add(quad(`
     vec3 c=skyRow(clamp(y,0.,1536.));
     c*=.95+.09*smoothstep(0.,1.,p.x/res.x);                 // the sun side is a little brighter
     c=mix(c,vec3(29,65,76)/255.,smoothstep(fold,res.y,p.y)*.9);   // deeper sky behind the about section
-    vec2 d=(p-(rect2.xy+rect2.zw*vec2(.48,.5)))/(rect2.zw*vec2(1.1,1.0));
-    c+=vec3(.11,.075,.04)*exp(-dot(d,d)*1.4);                // warm light around the small, sunlit cloud
+    vec2 d=(p-(rect.xy+rect.zw*vec2(.45,.4)))/(rect.zw*vec2(.6,.7));
+    c+=vec3(.04,.04,.03)*exp(-dot(d,d));                     // soft light around the cloud
     vec2 uv=(p-rect.xy)/rect.zw;
-    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); c=c*(1.-k.a)+shade(k.rgb,k.a);}   // premultiplied
-    vec4 m=smallAt(p); c=c*(1.-m.a)+m.rgb;
+    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); c=c*(1.-k.a)+k.rgb;}   // premultiplied
     gl_FragColor=vec4(c*vig(p)+grain(),1.);}`));
-/* in front of the 3D scene: the big cloud's brighter, nearer puffs again (so the ladder and the man pass behind
-   them), the whole cloud below the fold, and a little of the small cloud just below his landing spot, so his feet
-   settle into it instead of standing on top of the picture */
 fgScene.add(quad(`
-  uniform vec3 land;
   void main(){vec2 p=vec2(gl_FragCoord.x,res.y-gl_FragCoord.y), uv=(p-rect.xy)/rect.zw;
-    vec4 o=vec4(0.);
-    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){
-      vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y));
-      float m=max(texture2D(front,vec2(uv.x,1.-uv.y)).r, smoothstep(fold-.07*(fold-rect.y),fold,p.y));
-      o=vec4(shade(k.rgb,k.a)*vig(p)+grain()*k.a,k.a)*m;}
-    if(land.z>0.){
-      float m=smoothstep(land.y-land.z*.06,land.y+land.z*.12,p.y)*(1.-smoothstep(land.z*.5,land.z,abs(p.x-land.x)));
-      vec4 k=smallAt(p)*m; k.rgb=k.rgb*vig(p)+grain()*k.a; o=k+o*(1.-k.a);}
-    if(o.a<=0.) discard;
-    gl_FragColor=o;}`,
+    if(uv.x<=0.||uv.x>=1.||uv.y<=0.||uv.y>=1.) discard;
+    vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y));
+    float m=max(texture2D(front,vec2(uv.x,1.-uv.y)).r, smoothstep(fold-.07*(fold-rect.y),fold,p.y));
+    gl_FragColor=vec4(k.rgb*vig(p)+grain()*k.a,k.a)*m;}`,
   {transparent:true,blending:THREE.CustomBlending,blendSrc:THREE.OneFactor,blendDst:THREE.OneMinusSrcAlphaFactor,
    blendSrcAlpha:THREE.OneFactor,blendDstAlpha:THREE.OneMinusSrcAlphaFactor}));
 
@@ -341,13 +313,13 @@ const stage=new THREE.Group(); scene.add(stage);      // scaled so 1 unit = 1 pl
 const hang=new THREE.Group(); hang.position.y=PIVOT; stage.add(hang);
 const cage=new THREE.Group(); cage.position.y=-PIVOT; hang.add(cage);
 
-scene.add(new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9));
+{const hl=new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9); hl.layers.enableAll(); scene.add(hl);}
 scene.fog=new THREE.Fog(0x6b8f99,0,3000/0.11);   // ~20% haze toward the sky colour, like the clouds
-const sun=new THREE.DirectionalLight(0xffe2c6,2.6); scene.add(sun); scene.add(sun.target);
+const sun=new THREE.DirectionalLight(0xffe2c6,2.6); sun.layers.enableAll(); scene.add(sun); scene.add(sun.target);
 sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004;
 const SUN_DIR=new THREE.Vector3(-0.75,1.05,1.15).normalize();
-const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
-const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
+const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.layers.enableAll(); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
+const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.layers.enableAll(); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
 
 const add=(parent,m,cast=true,recv=true)=>{m.castShadow=cast;m.receiveShadow=recv;parent.add(m);return m;};
 const P=(a,y,r=R)=>new THREE.Vector3(r*Math.sin(a),y,r*Math.cos(a));
@@ -549,11 +521,12 @@ const body=track([
   [3.9, 36,1.18,48,1.20,.50, 0,   .28,0],     // crouches low before reaching the door
   [4.4, 58,1.20,46,1.20,.55, 0,   .30,0],     // duck-walks under the top of the door
   [4.95,74,1.20,46,1.20,.50, 0,   .05,0],     // crouched in the doorway, a hand on each side of the frame
-  [5.7, 75,1.20,48,1.20,.42, 0,  -.22,0],     // lifts his head and looks out at the sunlit cloud
-  [6.5, 75,1.20,48,1.20,.42, 0,  -.16,0],
-  [7.05,74,1.20,40,1.20,.62,.04,  .02,0],     // sinks lower, winding up
-  [7.3, 78,1.20,50,1.20,.40,.10, -.08,0]]);   // springs out
-const T_STAND=2.55, T_LET=7.3;
+  [5.6, 75,1.20,48,1.20,.42, 0,  -.22,0],     // lifts his head and looks out at the sky
+  [6.15,75,1.22,52,1.24,.30, 0,  -.42,.35],   // notices the umbrella hanging on the cage beside the door
+  [6.7, 75,1.20,52,1.20,.30, 0,  -.18,.1],    // takes it by the handle
+  [7.15,74,1.20,45,1.20,.55,.04,  .02,0],     // sinks lower, winding up
+  [7.4, 78,1.20,52,1.20,.38,.10, -.08,0]]);   // springs out
+const T_STAND=2.55, T_LET=7.4;
 T_RELEASE=T_LET;
 
 function bodyAt(t){
@@ -597,6 +570,7 @@ function buildGrips(){GRIP={
      {a:3.15,t:3.55,p:relaxedHand(1)},
      {a:3.95,t:4.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
      {a:4.55,t:5.0,p:()=>polar(R,freeA,98)},             // then the side of the frame on his left
+     {a:6.1,t:6.6,p:()=>UMB_HOOK},                       // then the umbrella's handle, hooked over the top ring
      {a:T_LET,t:1e9,p:null}],
   R:[{t:-1,p:kneeHand(Rt.leg)},
      {a:1.85,t:2.45,p:relaxedHand(-1)},
@@ -690,60 +664,117 @@ function poseOnCage(t,clock){
 const T_PIVOT=0;
 let rel=null;
 
-/* ---------- the leap: from the doorway across open sky to the sunlit cloud, then he lands and stands up ----------
-   His hips follow a slow ballistic arc (low gravity: weightless, never dramatic) from where he pushed off to just
-   above the landing spot, which layout() places on the cloud's peak, a little farther from the camera. */
-const LEAP_G=300, LEAP_APEX=55, LAND_Z=-250, LAND_YAW=.45;
-let LAND=null;                                   // the landing spot in stage units, set in layout()
-function legsFK(a,spread){                       // both legs bent by a (0 = straight); returns the hip height
+/* ---------- the umbrella: hangs closed on the cage's top ring, just left of the door, the whole time ----------
+   Origin = the bottom of the crook, where it is held; +y runs up the shaft to the tip. The canopy is rebuilt from an
+   "open" amount: ribs folded down along the shaft when closed, a soft dome with scalloped edges when open. */
+const UMB={R:68, SH:66, CR:5.5, RIBS:8, SEG:64, RINGS:12};
+const umbM=new THREE.MeshStandardMaterial({color:0x1f2a2a,roughness:.86,metalness:0,side:THREE.DoubleSide,envMapIntensity:.6});   // the cage's darkest ink
+const woodM=new THREE.MeshStandardMaterial({color:0x6a4429,roughness:.45,envMapIntensity:.8});
+const umb=new THREE.Group();
+{const sh=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,UMB.SH,10),iron); sh.position.set(-UMB.CR,UMB.CR+UMB.SH/2,0); umb.add(sh);
+ const cr=new THREE.Mesh(new THREE.TorusGeometry(UMB.CR,1.7,10,28,Math.PI),woodM); cr.rotation.z=Math.PI; cr.position.set(0,UMB.CR,0); umb.add(cr);
+ const ft=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.1,9,12),woodM); ft.position.set(-UMB.CR,UMB.CR+4.5,0); umb.add(ft);   // where the crook meets the shaft
+ const tip=new THREE.Mesh(new THREE.ConeGeometry(1.3,8,10),brass); tip.position.set(-UMB.CR,UMB.CR+UMB.SH+4,0); umb.add(tip);
+ umb.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});}
+const canopyGeo=new THREE.BufferGeometry();
+{const n=(UMB.SEG+1)*(UMB.RINGS+1); canopyGeo.setAttribute("position",new THREE.BufferAttribute(new Float32Array(n*3),3));
+ const idx=[]; for(let j=0;j<UMB.RINGS;j++)for(let i=0;i<UMB.SEG;i++){const a=j*(UMB.SEG+1)+i,b=a+UMB.SEG+1;idx.push(a,b,a+1,b,b+1,a+1);} canopyGeo.setIndex(idx);}
+const canopy=new THREE.Mesh(canopyGeo,umbM); canopy.castShadow=canopy.receiveShadow=true;
+canopy.position.set(-UMB.CR,UMB.CR+UMB.SH,0); umb.add(canopy);
+let canopyOpen=-1;
+function setCanopy(o){
+  if(Math.abs(o-canopyOpen)<1e-4)return; canopyOpen=o;
+  const P=canopyGeo.attributes.position, Lr=UMB.R/.8/UMB.RINGS;
+  for(let i=0;i<=UMB.SEG;i++){const th=i/UMB.SEG*Math.PI*2, f=Math.pow(Math.sin(th*UMB.RIBS/2),2);   // 0 on a rib, 1 between ribs
+    let r=0,y=0;
+    for(let j=0;j<=UMB.RINGS;j++){const s=j/UMB.RINGS;
+      if(j>0){const al=mix(2.98,1.74+.78*s,o); r+=Lr*Math.sin(al); y+=Lr*Math.cos(al);}
+      const rr=r*mix(.42,1,o)*(1-mix(.3,.06,o)*f*s), yy=y+f*s*s*mix(0,5,o);    // the cloth sags between ribs; scalloped edge
+      P.setXYZ(j*(UMB.SEG+1)+i,rr*Math.sin(th),yy,rr*Math.cos(th));}}
+  P.needsUpdate=true; canopyGeo.computeVertexNormals(); canopyGeo.computeBoundingSphere();}
+setCanopy(0);
+const HOOK_A=DC+.27;                                   // on the top ring, over the left side of the doorway
+const UMB_HOOK=polar(R,HOOK_A,STRAIGHT+3.6);
+function hangUmbrella(){cage.add(umb); umb.position.copy(UMB_HOOK); umb.rotation.set(0,HOOK_A-Math.PI/2,Math.PI); setCanopy(0);}
+hangUmbrella();
+function setOut(on){const n=on?1:0; fig.traverse(o=>o.layers.set(n)); umb.traverse(o=>o.layers.set(n));}   // drawn in front of the cloud once he is out
+
+/* ---------- the leap and the float ----------
+   A (0..UA s): he springs out holding the closed umbrella by the crook, swings it up in front of him and over his head,
+   and it opens. B (after UA): he hangs under it. The handle drifts on a soft spring toward a point beside the cage
+   (and, as you scroll, down beside the about text), while the whole umbrella-and-man swings like a slow pendulum,
+   rising a little at each end of the swing; his body trails the umbrella and his legs trail his body. */
+const FL={UA:.8, G:300, VOUT:150, VUP:150, Z:650, OM:.85, ZETA:1.05, SWA:.22, SWP:3.6, SWL:160, GRIP:92, ABOVE:78};
+const qY=y=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),y), qX=x=>new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),x), qZ=z=>new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),z);
+function legsFK(a,spread,swing=0,point=0){       // both legs bent by a (0 = straight); returns the hip height
   for(const [leg,side] of [[L.leg,1],[Rt.leg,-1]]){
-    leg.h.quaternion.setFromEuler(_e.set(-a,0,spread*side)); leg.k.quaternion.setFromEuler(_e.set(2*a,0,0)); leg.a.quaternion.setFromEuler(_e.set(-a,0,0));}
+    leg.h.quaternion.setFromEuler(_e.set(-a,0,spread*side+swing)); leg.k.quaternion.setFromEuler(_e.set(2*a,0,0)); leg.a.quaternion.setFromEuler(_e.set(-a+point,0,0));}
   return ANKLE+(THIGH+SHIN)*Math.cos(a);}
-function armsFK(k,sx,sz,el){                     // blend the arms from their captured pose toward a simple pose
-  const tg=[[sx,0,sz],[el,0,0],[sx,0,-sz],[el,0,0]];
-  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].forEach((o,i)=>{_qq.setFromEuler(_e.set(...tg[i]));o.quaternion.copy(rel.arms[i]).slerp(_qq,k);});
-  L.arm.w.rotation.set(.15,0,0); Rt.arm.w.rotation.set(.15,0,0);}
+function armTo(arm,side,pW,pole){                // solve one arm onto a stage-space point
+  const tW=stage.localToWorld(pW.clone()); arm.s.getWorldPosition(_t);
+  solveLimb(arm.s,arm.e,ARM1,ARM2,tW,_t.clone().add(pole.applyQuaternion(fig.getWorldQuaternion(_q)).multiplyScalar(80)),-1); arm.w.rotation.set(.2,0,0);}
 function captureRelease(clock){
   const sw=swayAt(T_LET-1e-3,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
   poseOnCage(T_LET-1e-3,clock); fig.updateMatrixWorld(true);
   const pel=new THREE.Vector3(); hips.getWorldPosition(pel); stage.worldToLocal(pel);
   const o=massOffset(); relTilt={x:-o.x*2.5,z:-o.z*2.5};          // pushing off kicks the cage back a little
-  const arms=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].map(o=>o.quaternion.clone());
-  stage.add(fig);
-  const a0=.32, hy1=legsFK(a0,0)*FIG_S;                            // legs reach down just before touching
-  const tgt=LAND.clone().add(V3(0,hy1,0));
-  const vy=Math.sqrt(2*LEAP_G*(Math.max(pel.y,tgt.y)+LEAP_APEX-pel.y));
-  const T=vy/LEAP_G+Math.sqrt(2*(pel.y+vy*vy/(2*LEAP_G)-tgt.y)/LEAP_G);
-  rel={pel,tgt,vy,T,arms,yaw0:DC,spX:spine.rotation.x,hdX:head.rotation.x};
+  const up=new THREE.Vector3(); umb.getWorldPosition(up); stage.worldToLocal(up);
+  const uq=new THREE.Quaternion(); umb.getWorldQuaternion(uq); uq.premultiply(stage.getWorldQuaternion(new THREE.Quaternion()).invert());
+  stage.add(fig); stage.add(umb); setOut(true);
+  rel={pel,umbP0:up,umbQ0:uq,c0:up.clone().sub(pel).applyQuaternion(qY(-DC)),spX:spine.rotation.x,hdX:head.rotation.x,sim:null};
 }
-function poseLeap(u,clock){
-  const r=rel, k=clamp01(u/r.T);
-  let a,yaw=r.yaw0,tip,spX,hdX,hdY=0;
-  if(u<r.T){                                                       // in the air
-    a=k<.5?mix(.12,.95,smooth(k/.4)):mix(.95,.32,smooth((k-.55)/.4));   // pushes off, tucks, reaches for the cloud
-    tip=mix(.3,.02,smooth(k/.7)); spX=mix(r.spX,.12,smooth(k/.3)); hdX=mix(r.hdX,.28,smooth(k/.6));
-    yaw=mix(r.yaw0,r.yaw0-.25,smooth(k));
-    const hy=legsFK(a,.08*Math.sin(Math.PI*k));
-    const q=new THREE.Quaternion().setFromEuler(_e.set(0,yaw,0)).multiply(_qq.setFromAxisAngle(V3(1,0,0),tip));
-    const p=r.pel.clone().lerp(r.tgt,k); p.y=r.pel.y+r.vy*u-.5*LEAP_G*u*u;
-    fig.quaternion.copy(q); hips.position.y=hy;
-    fig.position.copy(p).sub(V3(0,hy*FIG_S,0).applyQuaternion(q));
-    armsFK(smooth(k/.45),mix(-1.9,-1.2,smooth((k-.5)/.5)),.35,-.35);    // arms swing forward and up, open for balance
-  } else {                                                         // landed: sinks into the cloud, then stands
-    const v=u-r.T;
-    a=v<.22?mix(.32,.9,smooth(v/.22)):mix(.9,.05,smoother((v-.22)/1.1));
-    yaw=mix(r.yaw0-.25,LAND_YAW,smoother((v-1.5)/1.4));
-    spX=.06+.5*(a-.05)+.008*Math.sin(clock*1.3); tip=0;
-    hdX=v<1.3?mix(.28,.05,smooth(v/1.3)):mix(.05,-.12,smoother((v-1.5)/1.4));
-    hdY=.12*Math.sin(clock*.23)*smooth((v-3)/2);
-    hips.position.y=legsFK(a,.04)+(v>1.5?.3*Math.sin(clock*1.3):0);
-    fig.quaternion.setFromEuler(_e.set(0,yaw,0)); fig.position.copy(LAND);
-    const ka=smooth(v/.25), ks=smoother((v-.4)/1.2);
-    armsFK(1,mix(mix(-1.2,-.7,ka),.06,ks),mix(.45,.1,ks),mix(-.5,-.15,ks));
-  }
-  spine.rotation.set(spX,0,0); head.rotation.set(hdX,hdY,0);
-  return u>=r.T?u-r.T:-1;
+function phaseA(u){                              // positions only, so phase B can start from where A ends
+  const k=clamp01(u/FL.UA), out=fwdOf(DC);
+  const p=rel.pel.clone().addScaledVector(out,FL.VOUT*u); p.y+=FL.VUP*u-.5*FL.G*u*u;
+  const tip=mix(.3,0,smooth(k/.8)), q=qY(DC).multiply(qX(tip));
+  const a=k<.5?mix(.12,.75,smooth(k/.45)):mix(.75,.22,smooth((k-.5)/.5));
+  const c1=V3(0,FL.GRIP*FIG_S,5*FIG_S).applyQuaternion(q);
+  const C=p.clone().add(rel.c0.clone().applyQuaternion(qY(DC)).lerp(c1,smooth(Math.min(1,k*1.15))));
+  return {k,p,q,a,C};}
+function simStep(s,dt,T){const om=FL.OM,acc=T.clone().sub(s.p).multiplyScalar(om*om).addScaledVector(s.v,-2*FL.ZETA*om);
+  s.v.addScaledVector(acc,dt); s.p.addScaledVector(s.v,dt); s.u+=dt;}
+function floatTarget(){                          // the page point he drifts to: beside the cage, then down with the scroll
+  const max=Math.max(1,document.documentElement.scrollHeight-innerHeight), s=smoother(clamp01(scrollY/max));
+  const x=mix(FLOAT.a.x,FLOAT.b.x,s), y=mix(FLOAT.a.y,FLOAT.b.y,s);
+  return toStage(x,y,FL.Z).add(V3(0,FL.ABOVE*FIG_S,0));}
+function poseFloat(u,clock){
+  const r=rel;
+  if(u<FL.UA){                                   // A: the leap, the umbrella swung up and opened
+    const {k,p,q,a,C}=phaseA(u);
+    const hy=legsFK(a,.06,0,.15); hips.position.y=hy;
+    fig.quaternion.copy(q); fig.position.copy(p).sub(V3(0,hy*FIG_S,0).applyQuaternion(q));
+    const beta=Math.PI*(1-smoother(k*1.05));
+    const qu=qY(DC).multiply(qX(beta)); umb.quaternion.copy(r.umbQ0).slerp(qu,smooth(u/.22)); umb.position.copy(C);
+    setCanopy(Math.min(1.04,1.04*smooth((k-.42)/.5)));
+    spine.rotation.set(mix(r.spX,.04,smooth(k/.5)),0,0); head.rotation.set(mix(r.hdX,-.4,smooth(k/.7)),0,0);
+    fig.updateMatrixWorld(true);
+    armTo(L.arm,1,C,V3(.9,-.6,-.2));
+    const free=p.clone().add(V3(-24*FIG_S,30*FIG_S,26*FIG_S).applyQuaternion(q));
+    const grip=C.clone().add(V3(-UMB.CR,UMB.CR+9,0).applyQuaternion(umb.quaternion));
+    armTo(Rt.arm,-1,free.lerp(grip,smooth((k-.5)/.4)),V3(-.9,-.6,-.2));
+    return false;}
+  // B: hanging under the open umbrella
+  if(!r.sim||u<r.sim.u-1e-6){const A1=phaseA(FL.UA),A0=phaseA(FL.UA-1/240);
+    r.sim={u:FL.UA,p:A1.C.clone(),v:A1.C.clone().sub(A0.C).multiplyScalar(240)};}
+  const T=floatTarget(); while(r.sim.u<u) simStep(r.sim,Math.min(1/120,u-r.sim.u+1e-9),T);
+  const w=u-FL.UA, wp=2*Math.PI/FL.SWP, amp=FL.SWA*smooth(w/1.4)*(1+.15*Math.sin(w*.21));
+  const phi=amp*Math.sin(wp*w), dphi=amp*Math.cos(wp*w);
+  const G=r.sim.p.clone().add(V3(FL.SWL*Math.sin(phi),FL.SWL*(1-Math.cos(phi)),0));
+  const yaw=mix(DC,.3,smoother(w/2.4))+.12*Math.sin(w*.23)*smooth(w/4), lag=-.32*dphi;
+  const qu=qZ(phi).multiply(qY(yaw)).multiply(qX(.06*smooth(w/.5)));
+  umb.quaternion.copy(qu); umb.position.copy(G); setCanopy(w<.4?mix(1.04,1,smooth(w/.4)):1);
+  const qb=qZ(phi+lag).multiply(qY(yaw)).multiply(qX(-.03*smooth(w/.6)));
+  const legA=mix(.22,.1,smooth(w/1.2))+.05*Math.sin(clock*1.1);
+  const hy=legsFK(legA,.05,-1.6*lag,.38*smooth(w/1)); hips.position.y=hy;
+  fig.quaternion.copy(qb); fig.position.copy(G).sub(V3(0,(hy+FL.GRIP)*FIG_S,5*FIG_S).applyQuaternion(qb));
+  spine.rotation.set(.03-.5*lag,0,0);
+  head.rotation.set(-.12+.08*Math.sin(clock*.4),.28*Math.sin(clock*.27)*smooth((w-2)/2),0);
+  fig.updateMatrixWorld(true);
+  armTo(L.arm,1,G.clone(),V3(.9,-.3,-.3));
+  armTo(Rt.arm,-1,G.clone().add(V3(-UMB.CR,UMB.CR+9,0).applyQuaternion(qu)),V3(-.9,-.3,-.3));
+  return w>.9;
 }
+
 function poseFalling(u){
   // he keeps tumbling backwards past horizontal until he is falling head-first, slowly twisting
   const target=-2.55, kd=Math.max(.5,rel.w0/(target-rel.tip0));
@@ -778,7 +809,8 @@ function smoothPose(dt){
   const parts=SMOOTH_PARTS();
   if(!smoothState||smoothState.parent!==fig.parent||dt<=0||dt>.25){smoothState={parent:fig.parent,q:parts.map(o=>o.quaternion.clone()),p:parts.map(o=>o.position.clone())};return;}
   const a=1-Math.exp(-dt/.045);
-  parts.forEach((o,i)=>{smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
+  parts.forEach((o,i)=>{if(i===0&&fig.parent===stage)return;   // floating: the root follows the umbrella exactly
+    smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
 }
 
 buildGrips();
@@ -899,7 +931,11 @@ function captureLadderFall(ti,clock){
 
 
 /* ---------- layout: map frame pixels to screen and world, then place the cloud under the cage ---------- */
-let W=1,H=1,unit=1,climbSet=false;
+let W=1,H=1,unit=1,climbSet=false,HTg=1,FLOAT=null;
+const _ray=new THREE.Vector3();
+function toStage(x,y,z){                       // a page point (px, from the top of the sky) at stage depth z -> stage units
+  _ray.set(x/W*2-1,1-y/HTg*2,.5).unproject(camera).sub(camera.position).normalize();
+  const zW=stage.position.z+z*unit; return stage.worldToLocal(camera.position.clone().addScaledVector(_ray,(zW-camera.position.z)/_ray.z));}
 // the ladder ends, and the climb starts, inside a part of the cloud that is in front, so he climbs out of it
 let frontCol=null;                         // front matte down the ladder's column, one value per 2 cut-out rows
 const ladderClip=new THREE.Plane(new THREE.Vector3(0,1,0),1e6); iron.clippingPlanes=[ladderClip]; renderer.localClippingEnabled=true;
@@ -910,7 +946,6 @@ function layout(){
   const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
   renderer.setPixelRatio(dpr); renderer.setSize(W,HT,false); bgUni.res.value.set(W*dpr,HT*dpr); bgUni.fold.value=H*dpr;
   bgUni.rect.value.set(cl.x*dpr,cl.y*dpr,cl.w*dpr,cl.h*dpr); placeCloudCSS(skyEl,L,H);
-  const sm=L.small; bgUni.rect2.value.set(sm.x*dpr,sm.y*dpr,sm.w*dpr,sm.h*dpr);
   // the camera frames the first screen exactly as before; a view offset extends the picture downward
   const full=2*HT-H, D=3000, Hw=2*D*Math.tan(THREE.MathUtils.degToRad(FOV/2));
   camera.fov=2*THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV/2))*full/H));
@@ -919,13 +954,12 @@ function layout(){
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
   const upx=unit*H/Hw;                                                       // screen px per cage unit
-  // the landing spot: the screen point on the small cloud's top, carried into the stage at LAND_Z (a little farther away)
-  {camera.updateMatrixWorld(true); stage.updateMatrixWorld(true);
-   const d=new THREE.Vector3(L.land.x/W*2-1,1-L.land.y/HT*2,.5).unproject(camera).sub(camera.position).normalize();
-   const zW=LAND_Z*unit, P=camera.position.clone().addScaledVector(d,(zW-camera.position.z)/d.z);
-   LAND=stage.worldToLocal(P);
-   const sc=camera.position.z/(camera.position.z-zW);                       // he looks a little smaller over there
-   bgUni.land.value.set(L.land.x*dpr,(L.land.y-3*upx*sc)*dpr,26*upx*sc*dpr);}
+  camera.updateMatrixWorld(true); stage.updateMatrixWorld(true); HTg=HT;
+  // where he floats under the umbrella: beside the cage, over the sunlit side of the cloud; and, scrolled to the bottom,
+  // down beside the about text (page px). Scrolling moves him from one to the other.
+  FL.VOUT=portrait?70:150; FL.SWL=portrait?110:160;                         // phones: less room right of the cage
+  FLOAT=portrait?{a:{x:W*.75,y:H*.68},b:{x:W*.76,y:HT-H*.42}}
+               :{a:{x:Math.min(sx+W*.07,W*.9),y:H*.56},b:{x:W*.74,y:HT-H*.42}};
   if(!climbSet&&frontCol){
     const depth=(stage.position.y+Hw/2)/unit, nOf=d=>Math.ceil((FLOOR+d)/(2*RUNG));
     const cs=cl.w/SKY.CW, ramp=.035*(H-cl.y);                                 // screen px per cut-out px
@@ -971,7 +1005,7 @@ function frame(now){
     introState=poseIntro(ti,clock);
     shadow.visible=fig.position.y>FLOOR-3&&Math.hypot(fig.position.x,fig.position.z)>HATCH+4;
     shadow.position.x=fig.position.x; shadow.position.z=fig.position.z;
-    if(introState.seated){mode="main"; t0=pendingMain?now:null; if(pendingMain)stageEl.classList.add("played"); pendingMain=false;}
+    if(introState.seated){mode="main"; t0=pendingMain?now:null; pendingMain=false;}
     return finishFrame(now);
   }
   if(mode==="ladderFall"){
@@ -988,24 +1022,26 @@ function frame(now){
     const r=Math.hypot(fig.position.x,fig.position.z);
     shadow.visible=r<R-6; shadow.position.x=fig.position.x; shadow.position.z=fig.position.z; shadow.rotation.z=-b.yaw;
   } else {
-    if(!released){captureRelease(clock); released=true;}
+    if(!released){captureRelease(clock); released=true; stageEl.classList.add("played");}
     const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
-    const v=poseLeap(t-T_RELEASE,clock); shadow.visible=false;
-    stageEl.classList.toggle("landed",v>.5);
+    const settled=poseFloat(t-T_RELEASE,clock); shadow.visible=false;
+    stageEl.classList.toggle("landed",settled);
   }
   finishFrame(now);
 }
 function finishFrame(now){
   const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
   if(!window.__manual) smoothPose(dt);
-  renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
+  // the sky and cloud, the 3D scene, the cloud's nearer puffs; then, once he is out of the cage, him and the
+  // umbrella again on top (layer 1): he floats in front of the cloud, not inside it
+  renderer.clear(); renderer.render(bgScene,bgCam); camera.layers.set(0); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
+  if(released){renderer.clearDepth(); camera.layers.set(1); renderer.render(scene,camera); camera.layers.set(0);}
 }
 
 /* ---------- boot ---------- */
 const ldr=new THREE.TextureLoader();
-Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_front.png"),ldr.loadAsync("assets/cloud_small.webp")]).then(([tex,front,small])=>{
+Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_front.png")]).then(([tex,front])=>{
   front.colorSpace=THREE.NoColorSpace; bgUni.front.value=front;
-  small.colorSpace=THREE.NoColorSpace; small.premultiplyAlpha=true; small.minFilter=THREE.LinearMipmapLinearFilter; bgUni.small.value=small;
   {const im=front.image, c=document.createElement("canvas"); c.width=im.width; c.height=im.height;
    const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(im,0,0);
    const x=Math.round(SKY.PEAK.x/SKY.CW*im.width), d=g.getImageData(x,0,1,im.height).data;
@@ -1024,21 +1060,21 @@ Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_fr
   window.__seek=(t,clock=10)=>{const now=clock*1000; mode="main"; t0=t===null?null:now-t*1000; frame(now);};
   window.__seekIntro=(ti,clock=10)=>{const now=clock*1000; mode="intro"; introStart=now-ti*1000; frame(now);};
   window.__ladderFall=(ti,u)=>{window.__seekIntro(ti); captureLadderFall(ti,10); mode="ladderFall"; fallStart=10000-u*1000; frame(10000);};
-  window.__dbg={leap:()=>rel&&{T:rel.T,TL:T_LET},LAND:()=>LAND,camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
+  window.__dbg={leap:()=>({TL:T_LET,UA:FL.UA}),camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
   window.__ready=true;
 });
 {const ro=new ResizeObserver(()=>layout()); ro.observe(stageEl); ro.observe(skyEl);}
 
 document.getElementById("letgo").addEventListener("click",()=>{
   const now=performance.now();
-  if(mode==="intro"){pendingMain=true; stageEl.classList.add("waiting"); return;}
-  stageEl.classList.add("played");          // still on his way up: he gets in, then goes straight for the door
+  stageEl.classList.add("waiting");                        // the button has been pressed; the text changes when he jumps
+  if(mode==="intro"){pendingMain=true; return;}          // still on his way up: he gets in, then goes straight for the door
   if(mode==="main"&&t0!==null) return;
-  t0=reduce?now-30000:now; released=false; cage.add(fig); armCap=null; rel=null; smoothState=null;
+  t0=reduce?now-30000:now; released=false; cage.add(fig); setOut(false); hangUmbrella(); armCap=null; rel=null; smoothState=null;
 });
 document.getElementById("again").addEventListener("click",()=>{   // back to the start: the climb up through the cloud
   const now=performance.now(); stageEl.classList.remove("played","landed","waiting");
-  mode=reduce?"main":"intro"; introStart=now; cage.add(fig); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null;
+  mode=reduce?"main":"intro"; introStart=now; cage.add(fig); setOut(false); hangUmbrella(); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null;
 });
 </script>
 
