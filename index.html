@@ -47,9 +47,10 @@ nav{position:relative;z-index:2;display:flex;justify-content:space-between;align
   padding:calc(22px + env(safe-area-inset-top,0px)) clamp(16px,5vw,64px) 0}
 nav a{color:var(--cloud);text-decoration:none;font-size:1.05rem;letter-spacing:.02em}
 nav a:hover{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
-/* the logo: the folded shirt (tools/shirt_logo.py) with the name beside it, top left, in line with the text below */
+/* the logo: the folded shirt (tools/shirt_logo.py), top left, in line with the text below. Just the shirt here:
+   the hero right under it already says the name. (Shirt + name is the version for documents and email.) */
 nav .brand{display:flex;align-items:center;gap:12px;font-size:1.55rem;letter-spacing:.01em}
-nav .brand img{width:48px;height:48px;display:block}
+nav .brand img{width:56px;height:56px;display:block;margin-left:-4px}
 nav .brand:hover{text-decoration:none}
 
 .copy{position:relative;z-index:2;align-self:center;padding:0 clamp(16px,5vw,64px) 14vh;pointer-events:none;display:grid}
@@ -102,7 +103,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
   .sky{--cx:57vw;--cy:40vh;--cw:150vh}
   nav{padding-top:calc(10px + env(safe-area-inset-top,0px))}
   nav a{font-size:.9rem}
-  nav .brand{font-size:1.15rem} nav .brand img{width:34px;height:34px}
+  nav .brand img{width:38px;height:38px}
   .copy{padding-bottom:12vh}
   .hello{font-size:clamp(1.2rem,7vh,1.8rem)}
   .what{font-size:clamp(.9rem,4.4vh,1.1rem)}
@@ -120,7 +121,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
   .tallbr{display:inline}
   nav{padding-top:calc(16px + env(safe-area-inset-top,0px))}
   nav a{font-size:.95rem}
-  nav .brand{font-size:1.25rem;gap:10px} nav .brand img{width:38px;height:38px}
+  nav .brand img{width:44px;height:44px}
 }
 @media (prefers-reduced-motion:reduce){
   .line{animation:none;opacity:1;transform:none}
@@ -135,7 +136,7 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 <canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a cloud into an old bronze birdcage hanging in the sky, where a red balloon is tied. When you open the door, he unties the balloon and jumps; for a moment he falls, then the balloon catches him and carries him up and out of sight."></canvas>
 <div class="stage" id="stage">
   <nav>
-    <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="48" height="48"><span>Gonçalo</span></a>
+    <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="56" height="56"></a>
     <a href="#about">about</a>
   </nav>
   <div class="copy" id="top">
