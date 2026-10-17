@@ -195,7 +195,7 @@ function skyLayout(W,H){             // H = height of the first screen
   if(portrait){by=H*.38;bh=H*.62;px=.85;py=1;}
   else if(shortWide){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the cloud to the right of the quote
   const k=Math.max(bw/SKY.PW,bh/SKY.PH), x0=bx+(bw-SKY.PW*k)*px, y0=by+(bh-SKY.PH*k)*py;
-  const sx=portrait?W*.65:x0+SKY.ANCHOR.x*k, sy=y0+(SKY.ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
+  const sx=portrait?W*.58:x0+SKY.ANCHOR.x*k, sy=y0+(SKY.ANCHOR.y+(portrait?140:shortWide?95:115))*k;   // lower than it used to be: the cage is bigger now; on phones it hangs below the text
   // the cloud's peak sits right under the cage; the cloud is big and may run off the right edge and below
   // the fold (scrolling reveals the rest of it)
   const w=portrait?W*1.6:H*1.5, s=w/SKY.CW;
@@ -211,7 +211,7 @@ function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(
 import * as THREE from "three";
 
 /* ---------- constants (units = px of the 1280x720 layout frame, see SKY above) ---------- */
-const CAGE_SCALE_WIDE=.34, CAGE_SCALE_TALL=.62;   // smaller on wide screens, bigger on phones
+const CAGE_SCALE_WIDE=.44, CAGE_SCALE_TALL=.85;   // smaller on wide screens, bigger on phones
 const PIVOT=3600;                    // chain pivot height above the cage base
 const R=84, STRAIGHT=150, DOME=74, NB=36, S=2*Math.PI/NB, MID=30;
 const DOOR=1.2;                      // door faces right, turned a little toward the camera
@@ -353,6 +353,12 @@ function tube(points,rad,mat,seg){const c=new THREE.CatmullRomCurve3(points);con
 function arc(a0,a1,y,r=R,n=48){const pts=[];for(let i=0;i<=n;i++)pts.push(P(a0+(a1-a0)*i/n,y,r));return pts;}
 function ring(y,r,rad,mat){const m=new THREE.Mesh(new THREE.TorusGeometry(r,rad*THICK,14,128),mat);m.rotation.x=Math.PI/2;m.position.y=y;m.castShadow=m.receiveShadow=true;return m;}
 const BAR=2.1;
+// the chain can fade out above the cage (phones: so it doesn't run through the words above it)
+const CHAIN_FADE={value:new THREE.Vector2(1e5,2e5)};
+const chainM=bronze.clone(); chainM.transparent=true;
+chainM.onBeforeCompile=sh=>{sh.uniforms.chainFade=CHAIN_FADE;
+  sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying float vChainY;").replace("#include <begin_vertex>","#include <begin_vertex>\nvChainY=(instanceMatrix*vec4(transformed,1.)).y;");
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform vec2 chainFade;varying float vChainY;").replace("#include <dithering_fragment>","gl_FragColor.a*=1.-smoothstep(chainFade.x,chainFade.y,vChainY);\n#include <dithering_fragment>");};
 
 /* cage: base, bars, dome, rings */
 const HATCH=27;   // round opening in the floor where the ladder comes up
@@ -378,7 +384,7 @@ add(cage,new THREE.Mesh(new THREE.ConeGeometry(5,9,20),bronze)).position.y=STRAI
 add(cage,new THREE.Mesh(new THREE.TorusGeometry(14,1.6,12,48),bronze)).position.y=STRAIGHT+DOME+22;
 {const linkG=new THREE.TorusGeometry(3.2,.85,8,20);linkG.scale(1,1.6,1);
  const y0=STRAIGHT+DOME+38, n=Math.ceil((PIVOT-y0)/8.6)+2;
- const links=new THREE.InstancedMesh(linkG,bronze,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
+ const links=new THREE.InstancedMesh(linkG,chainM,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
  for(let i=0;i<n;i++){e.set(0,i%2?Math.PI/2:0,0);q.setFromEuler(e);m.compose(new THREE.Vector3(0,y0+i*8.6,0),q,new THREE.Vector3(1,1,1));links.setMatrixAt(i,m);}
  cage.add(links);}
 /* door on a hinge */
@@ -535,23 +541,22 @@ function track(keys){
 const DC=DOOR, OUT=DC+Math.PI;
 // body: [t, root r, root angle, hips height, facing, spine bend, lean back, head nod, head turn]
 const body=track([
-  [-1,  24,.30,10,.30, .08,  0,   .06,0],     // sitting cross-legged on the cage floor
-  [0,   24,.30,10,.30, .08,  0,   .06,0],
-  [.6,  24,.30,10,.32, .10,  0,  -.04,.75],   // looks toward the door
-  [1.35,27,.30,15,.30, .48,  0,   .12,.25],   // leans forward, feet come under him
-  [1.95,33,.30,42,.30, .42,  0,   .10,0],     // pushes up through his legs
-  [2.55,40,.30,73.5,.32,.05, 0,  -.05,.3],    // standing
-  [2.95,42,.50,73,.55, .06,  0,  -.05,.6],    // leans in and pushes the door open
-  [3.45,34,.90,66,1.0, .15,  0,   0,.2],      // steps toward the doorway
-  [3.9, 36,1.18,48,1.20,.50, 0,   .28,0],     // crouches low before reaching the door
-  [4.4, 58,1.20,46,1.20,.55, 0,   .30,0],     // duck-walks under the top of the door
-  [4.95,74,1.20,46,1.20,.50, 0,   .05,0],     // crouched in the doorway, a hand on each side of the frame
-  [5.6, 75,1.20,48,1.20,.42, 0,  -.22,0],     // lifts his head and looks out at the sky
-  [6.15,75,1.22,52,1.24,.30, 0,  -.42,.35],   // looks up at the balloon tied to the cage beside the door
-  [6.7, 75,1.20,52,1.20,.30, 0,  -.3,.2],     // unties it, the string in his hand
-  [7.15,74,1.20,45,1.20,.55,.04,  .02,0],     // sinks lower, winding up
-  [7.4, 78,1.20,52,1.20,.38,.10, -.08,0]]);   // springs out
-const T_STAND=2.55, T_LET=7.4;
+  [-1,  64,0,  73.5,0,   .02, 0,  -.05,0],     // standing at the front bars, hands on them, facing you
+  [0,   64,0,  73.5,0,   .02, 0,  -.05,0],
+  [.45, 62,.05,73.5,.25, .03, 0,  -.08,.55],   // lets go and looks toward the door
+  [1.0, 48,.25,73.5,.35, .05, 0,  -.05,.4],    // turns and steps toward it
+  [1.35,42,.40,73.5,.45, .05, 0,  -.05,.55],
+  [1.75,42,.50,73,.55, .06,  0,  -.05,.6],     // leans in and pushes the door open
+  [2.25,34,.90,66,1.0, .15,  0,   0,.2],       // steps toward the doorway
+  [2.7, 36,1.18,48,1.20,.50, 0,   .28,0],      // crouches low before reaching the door
+  [3.2, 58,1.20,46,1.20,.55, 0,   .30,0],      // duck-walks under the top of the door
+  [3.75,74,1.20,46,1.20,.50, 0,   .05,0],      // crouched in the doorway, a hand on each side of the frame
+  [4.25,75,1.20,48,1.20,.42, 0,  -.22,0],      // lifts his head and looks out at the sky
+  [4.7, 75,1.22,52,1.24,.30, 0,  -.42,.35],    // looks up at the balloon tied beside the door
+  [5.15,75,1.20,52,1.20,.30, 0,  -.3,.2],      // unties it, the string in his hand
+  [5.55,74,1.20,45,1.20,.55,.04,  .02,0],      // sinks lower, winding up
+  [5.8, 78,1.20,52,1.20,.38,.10, -.08,0]]);    // springs out
+const T_STAND=0, T_LET=5.8;
 T_RELEASE=T_LET;
 
 function bodyAt(t){
@@ -568,9 +573,9 @@ function sittingFoot(t,side){            // ankles crossed in front, sliding bac
   const p=cross.lerp(under,kk); p.y+=4*Math.sin(Math.PI*kk)*FIG_S;
   return {p,yaw:mix(b.yaw-1.15*side,b.yaw,kk),cross:1-kk};}
 const STEPS={
-  L:[{t:-1,...footFromBody(T_STAND,1,2)},{a:3.0,t:3.4,...footFromBody(3.5,1,4)},{a:3.9,t:4.3,...footFromBody(4.45,1,6)},
-     {a:4.55,t:4.95,...footFromBody(4.95,1,3)}],
-  R:[{t:-1,...footFromBody(T_STAND,-1,2)},{a:3.4,t:3.85,...footFromBody(3.95,-1,4)},{a:4.3,t:4.75,...footFromBody(4.95,-1,3)}]};
+  L:[{t:-1,...footFromBody(0,1,2)},{a:.45,t:.9,...footFromBody(1.35,1,2)},{a:1.8,t:2.2,...footFromBody(2.3,1,4)},{a:2.7,t:3.1,...footFromBody(3.25,1,6)},
+     {a:3.35,t:3.75,...footFromBody(3.75,1,3)}],
+  R:[{t:-1,...footFromBody(0,-1,2)},{a:.7,t:1.15,...footFromBody(1.35,-1,2)},{a:2.2,t:2.65,...footFromBody(2.75,-1,4)},{a:3.1,t:3.55,...footFromBody(3.75,-1,3)}]};
 function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
   if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw};
@@ -582,24 +587,25 @@ function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
 /* hands: on his knees while sitting, then the door, the door frame and the bars */
 const nearestBar=a=>off+Math.round((a-off)/S)*S;
 const DOOR_BAR=DOOR-.5*S;
-function doorAngleAt(t){if(t===null||t<2.75)return 0;const u=t-2.75;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
+const BAR_L=polar(R,off-4*S,FLOOR+118), BAR_R=polar(R,off-7*S,FLOOR+118);   // two front bars at chest height, about shoulder width apart
+function doorAngleAt(t){if(t===null||t<1.55)return 0;const u=t-1.55;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
 function doorBarAt(t,y){const a=openSign*doorAngleAt(t);return polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);}
 const _kp=new THREE.Vector3();
 function kneeHand(leg){return ()=>{leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;return _kp.clone();};}
 function relaxedHand(side){return t=>{const b=bodyAt(Math.max(0,t));return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};}
 let GRIP=null;
 function buildGrips(){GRIP={
-  L:[{t:-1,p:kneeHand(L.leg)},
-     {a:1.85,t:2.45,p:relaxedHand(1)},
-     {a:2.45,t:2.75,p:t=>doorBarAt(t,112)},             // pushes the door open
-     {a:3.15,t:3.55,p:relaxedHand(1)},
-     {a:3.95,t:4.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
-     {a:4.55,t:5.0,p:()=>polar(R,freeA,98)},             // then the side of the frame on his left
-     {a:6.1,t:6.5,p:t=>BAL_HOOK.clone().add(V3(1.5*Math.sin(t*23),2.4*Math.sin(t*29),0).multiplyScalar(clamp01((t-6.55)/.1)*clamp01((7.05-t)/.1)))},   // then the balloon's knot on the ring: he unties it
+  L:[{t:-1,p:()=>BAR_L},                                // holding the front bars
+     {a:.3,t:.75,p:relaxedHand(1)},
+     {a:1.25,t:1.55,p:t=>doorBarAt(t,112)},             // pushes the door open
+     {a:1.95,t:2.35,p:relaxedHand(1)},
+     {a:2.75,t:3.1,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
+     {a:3.35,t:3.8,p:()=>polar(R,freeA,98)},             // then the side of the frame on his left
+     {a:4.6,t:5.0,p:t=>BAL_HOOK.clone().add(V3(1.5*Math.sin(t*23),2.4*Math.sin(t*29),0).multiplyScalar(clamp01((t-5.05)/.1)*clamp01((5.5-t)/.1)))},   // then the balloon's knot on the ring: he unties it
      {a:T_LET,t:1e9,p:null}],
-  R:[{t:-1,p:kneeHand(Rt.leg)},
-     {a:1.85,t:2.45,p:relaxedHand(-1)},
-     {a:3.95,t:4.35,p:()=>polar(R,hingeA,96)},           // the hinge side of the frame
+  R:[{t:-1,p:()=>BAR_R},
+     {a:.35,t:.8,p:relaxedHand(-1)},
+     {a:2.75,t:3.15,p:()=>polar(R,hingeA,96)},           // the hinge side of the frame
      {a:T_LET,t:1e9,p:null}]};}
 function handAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
@@ -665,7 +671,7 @@ function poseOnCage(t,clock){
   // feet and legs
   for(const [leg,list,side] of [[L.leg,STEPS.L,1],[Rt.leg,STEPS.R,-1]]){
     let f,cross=0;
-    if(tt<T_STAND){const s=sittingFoot(tt<0?0:tt,side);f=s;cross=s.cross;} else f=footAt(list,tt);
+    f=footAt(list,tt);
     const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
     const poleL=V3(mix(.15,1.1,cross)*side,mix(-.2,.35,cross),mix(1,.45,cross));
     const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
@@ -691,14 +697,18 @@ let rel=null;
 
 /* ---------- the red balloon: tied to the cage's top ring by the door, bobbing above it the whole time ----------
    It lives in the stage (not the cage) so it can leave with him; before that it is pinned to the knot on the ring. */
-const BAL={R:44, SLACK:85, OFF:V3(104,34,34)};     // OFF: out to the right in a breeze, beside the cage and clear of the menu
-const balM=new THREE.MeshPhysicalMaterial({color:0xb02f26,roughness:.3,metalness:0,clearcoat:.9,clearcoatRoughness:.2,sheen:.4,sheenColor:new THREE.Color(0xff9a80),envMapIntensity:.9});
+const BAL={R:44, SLACK:62, OFF:V3(104,34,34)};     // OFF: out to the right in a breeze, beside the cage and clear of the menu
+const balM=new THREE.MeshPhysicalMaterial({color:0xff1a1a,roughness:.22,metalness:0,clearcoat:1,clearcoatRoughness:.12,sheen:.25,sheenColor:new THREE.Color(0xff8a70),envMapIntensity:.9});
 const strM=new THREE.MeshStandardMaterial({color:0xece2d4,roughness:.8});
 const bal=new THREE.Group();                          // origin at the knot, +y up through the balloon
-{const pts=[],N=48;
- for(let i=0;i<=N;i++){const t=i/N,y=t*BAL.R*2.35,r=BAL.R*Math.pow(Math.sin(Math.PI*Math.min(t,.999)),.72)*(.78+.3*t);pts.push(new THREE.Vector2(Math.max(r,.05),y));}
- const m=new THREE.Mesh(new THREE.LatheGeometry(pts,64),balM); m.position.y=BAL.R*.1; m.castShadow=true; bal.add(m);
- const k=new THREE.Mesh(new THREE.ConeGeometry(BAL.R*.12,BAL.R*.16,16),balM); k.rotation.x=Math.PI; k.position.y=BAL.R*.08; bal.add(k);}
+{// a latex balloon: round on top, a little longer and narrower underneath, pinched into the knot
+ const Rb=BAL.R, pts=[], N=64, lift=1.3*Rb+Rb*.16;
+ for(let i=0;i<=N;i++){const th=Math.PI*(1-i/N), c=Math.cos(th), lo=Math.max(0,c);
+   const x=Rb*Math.sin(th)*(1-.24*Math.pow(lo,2.4)), y=-Rb*c*(1+.3*Math.pow(lo,1.2));
+   pts.push(new THREE.Vector2(Math.max(x,.4),y+lift));}
+ const m=new THREE.Mesh(new THREE.LatheGeometry(pts,72),balM); m.castShadow=true; bal.add(m);
+ const knot=new THREE.Mesh(new THREE.SphereGeometry(Rb*.085,16,10),balM); knot.scale.set(1,.8,1); knot.position.y=Rb*.1; bal.add(knot);
+ const lip=new THREE.Mesh(new THREE.TorusGeometry(Rb*.07,Rb*.03,8,20),balM); lip.rotation.x=Math.PI/2; lip.position.y=Rb*.04; bal.add(lip);}
 stage.add(bal);
 let strMesh=null;
 function setString(a,b,len){                          // the string from a to b; it sags when slack
@@ -722,7 +732,7 @@ function setOut(on){const n=on?1:0; for(const o of [fig,bal]) o.traverse(c=>c.la
    string between them only pulls when it is taut. He unties it with some slack in hand, so for a moment he simply
    falls; then the string snaps taut, the jolt slows him, and the two rise together, drifting with the wind, up and
    out of the frame. His body hangs from his hand along the string and swings after the jolt; his legs trail. */
-const BS={G:300, MM:1, MB:.25, LIFT:1250, CM:.25, CB:6, WIND:230, VOUT:110, VUP:95, DT:1/240};
+const BS={G:300, MM:1, MB:.25, LIFT:1350, CM:.25, CB:6, WIND:230, VOUT:165, VUP:150, DT:1/240};
 const qZ=z=>new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),z), qY=y=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),y);
 function legsFK(a,spread,swing=0,point=0){            // both legs bent by a (0 = straight); returns the hip height
   for(const [leg,side] of [[L.leg,1],[Rt.leg,-1]]){
@@ -765,7 +775,7 @@ function poseBalloon(u,clock){
   const a=w<0?mix(.12,.5,smooth(u/.3)):mix(.5,.14,smooth(w/1.2))+.04*Math.sin(clock*1.2);
   const hy=legsFK(a,.07,-1.4*lag,.35*smooth(u/.6)); hips.position.y=hy;
   const pos=h.clone().sub(V3(12*FIG_S,(hy+92)*FIG_S,4*FIG_S).applyQuaternion(q));
-  const kb=smooth(u/.28); fig.position.copy(r.p0).lerp(pos,kb); fig.quaternion.copy(r.q0).slerp(q,kb);
+  const kb=smooth(u/.12); fig.position.copy(r.p0).lerp(pos,kb); fig.quaternion.copy(r.q0).slerp(q,kb);
   spine.rotation.set(mix(r.spX,.03-.4*lag,kb),0,0);
   head.rotation.set(mix(r.hdX,w<0?-.2:-.55,smooth(u/.6)),.15*Math.sin(clock*.3)*smooth(w/2),0);
   fig.updateMatrixWorld(true);
@@ -821,7 +831,7 @@ buildGrips();
 /* ---------- intro: he climbs the ladder, comes up through the hatch and sits down ---------- */
 const RUNG=26, HANDLE_TOP=FLOOR+2*RUNG;           // rungs every 26 units, two above the floor as handles
 const rungY=y=>FLOOR-RUNG*Math.round((FLOOR-y)/RUNG);
-const CLIMB_P=.9, CLIMB_V=2*RUNG/CLIMB_P;         // one full cycle climbs two rungs
+const CLIMB_P=.72, CLIMB_V=2*RUNG/CLIMB_P;         // one full cycle climbs two rungs
 let climbStart=FLOOR-2*RUNG*18;                   // set from the screen size, so he climbs into view (whole cycles)
 // the gait follows how far he has climbed: on the last cycle body, arms and legs slow down together and stop
 const tauEnd=()=>(FLOOR-climbStart)/CLIMB_V;
@@ -841,30 +851,24 @@ function limbOnLadder(name,t){
   if(t>=e||prev===cur) return {y:t>=e?cur:prev,lift:0};
   const k=smoother((t-s)/(e-s));return {y:mix(prev,cur,k),lift:Math.sin(Math.PI*k)};}
 
-// after the climb: step back off the top rung, turn, walk to his spot, sit down cross-legged
-const SPOT=polar(24,.30,FLOOR);
+// after the climb: step back off the top rung, turn round and step up to the front bars, hands on them, facing you
 const entry=track([
   [0,   0,30, Math.PI,62,.10,-.04,-.2,0],
   [.7,  0,26, Math.PI,72,.05, 0,  -.05,0],
-  [1.3, 2,34, Math.PI,73,.02, 0,   0,-.4],
-  [2.1, SPOT.x,28, .3,73.5,.05,0,-.05,0],
-  [2.6, SPOT.x,SPOT.z,.3,73.5,.05,0,-.05,0],
-  [3.25,SPOT.x,SPOT.z,.3,42,.45,0,.1,0],
-  [3.85,SPOT.x,SPOT.z,.3,15,.48,0,.12,0],
-  [4.5, SPOT.x,SPOT.z,.3,10,.08,0,.06,0]]);
-const T_ENTRY=4.5, T_OFF_LADDER=1.0;
+  [1.3, 2,38, Math.PI,73,.02, 0,   0,-.4],
+  [1.9, 1,52, 1.4,73.5,.04, 0,  -.05,-.2],
+  [2.4, 0,62, .1,73.5,.03,  0,  -.05,0],
+  [2.7, 0,64, 0, 73.5,.02,  0,  -.05,0]]);
+const T_ENTRY=2.7, T_OFF_LADDER=1.0;
 function entryBody(tb){const [x,z,yaw,hy,spX,tip,hdX,hdY]=entry(tb);return {root:V3(x,FLOOR,z),hy,yaw,spX,tip,hdX,hdY};}
-function entryFoot(tb,side){             // planted steps off the ladder and around, then crossing his legs
+function entryFoot(tb,side){             // planted steps off the ladder, round, and up to the bars
   const rungFoot=V3(-side*9,climbEndLimb(side>0?"LF":"RF").y,6), back=V3(-side*9,FLOOR,36);   // starts where the climb left each foot
   const under=(tt,f=2)=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),f*FIG_S);};
-  const steps=side<0?[[.05,.55,rungFoot,back,Math.PI,Math.PI],[1.3,1.75,back,under(1.9),Math.PI,1.6],[2.2,2.6,under(1.9),under(2.6),1.6,.3]]
-                    :[[.6,1.1,rungFoot,back,Math.PI,Math.PI],[1.7,2.15,back,under(2.3),Math.PI,1.0],[2.45,2.8,under(2.3),under(2.6),1.0,.3]];
+  const steps=side<0?[[.05,.55,rungFoot,back,Math.PI,Math.PI],[1.35,1.8,back,under(1.9),Math.PI,1.4],[2.15,2.6,under(1.9),under(2.7),1.4,0]]
+                    :[[.6,1.1,rungFoot,back,Math.PI,Math.PI],[1.65,2.05,back,under(2.1),Math.PI,1.0],[2.3,2.7,under(2.1),under(2.7),1.0,0]];
   let p=rungFoot.clone(),yaw=Math.PI;
   for(const [a,b,p0,p1,y0,y1] of steps){if(tb<a)break;const k=smoother((tb-a)/(b-a));p=p0.clone().lerp(p1,k);p.y+=8*Math.sin(Math.PI*k);yaw=mix(y0,y1,k);}
-  // sitting down: feet slide from under him to crossed in front
-  const kk=smoother((tb-3.55)/.75);
-  if(kk>0){const b=entryBody(T_ENTRY);const cross=bodyPoint(b,-6.5*side,3,side>0?17:11);p=p.clone().lerp(cross,kk);p.y+=4*Math.sin(Math.PI*kk)*FIG_S;yaw=mix(yaw,b.yaw-1.15*side,kk);}
-  return {p,yaw,cross:kk};}
+  return {p,yaw,cross:0};}
 function entryHand(tb,arm,side){
   const handle=V3(-side*12,climbEndLimb(side>0?"LH":"RH").y,2);
   const relaxedAt=tt=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};
@@ -872,8 +876,8 @@ function entryHand(tb,arm,side){
   let p;
   if(tb<leave)p=handle;
   else{const k=smoother((tb-leave)/.5);p=handle.clone().lerp(relaxedAt(tb),k);}
-  const kk=smoother((tb-3.4)/.8);
-  if(kk>0){(side>0?L:Rt).leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;p=p.clone().lerp(_kp,kk);}
+  const kk=smoother((tb-2.15)/.55);                       // hands onto the bars
+  if(kk>0)p=p.clone().lerp(side>0?BAR_L:BAR_R,kk);
   return p;}
 
 function applyRig(spec){                 // shared: body, then legs and arms solved onto their targets
@@ -893,7 +897,7 @@ function applyRig(spec){                 // shared: body, then legs and arms sol
 }
 // while he is completely hidden inside the cloud the climb runs faster (nobody sees it), so he can
 // start deep in the cloud and still reach the cage in a reasonable time
-const HIDDEN_SPEED=4, MAX_CLIMB=21;
+const HIDDEN_SPEED=8, MAX_CLIMB=8;
 let warpT=null, warpI=null;           // real seconds -> intro seconds, built in layout()
 function warpIntro(ti){
   if(!warpT||ti<=0) return ti;
@@ -958,7 +962,9 @@ function layout(){
   stage.scale.setScalar(unit);
   const upx=unit*H/Hw;                                                       // screen px per cage unit
   camera.updateMatrixWorld(true); stage.updateMatrixWorld(true); HTg=HT;
-  BS.WIND=portrait?20:230;                                                  // phones: little room to the right, so he rises nearly straight up
+  BS.WIND=portrait?170:1400;                                                // a breeze carries him off to the right, below the menu
+  BAL.OFF.set(portrait?66:104,portrait?54:34,30);                            // phones: tied closer, so it stays on screen
+  CHAIN_FADE.value.set(portrait?STRAIGHT+DOME+70:1e5,portrait?STRAIGHT+DOME+230:2e5);
   // where he floats under the umbrella: beside the cage, over the sunlit side of the cloud; and, scrolled to the bottom,
   // down beside the about text (page px). Scrolling moves him from one to the other.
   if(!climbSet&&frontCol){
