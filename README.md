@@ -1,18 +1,19 @@
-# GL — personal homepage
+# Gonçalo Leal — personal homepage
 
 **Live site: [gleal42.github.io/interactive-personal-portfolio](https://gleal42.github.io/interactive-personal-portfolio/)**
 
-A single-page site built around one image: a man in a birdcage hanging in the sky.
-The page opens with him climbing the ladder toward the cage.
+A single-page site built around one scene: a bronze birdcage hanging in the sky above a cloud, with a red
+balloon tied to it. The man in the scene (modelled on me, in my green plaid shirt) climbs a ladder up through
+the cloud, comes in through a hatch in the floor and holds the front bars, facing you.
 
-- Click **let go** while he is on the ladder and he lets go right there, falling backwards into the clouds.
-- Otherwise he climbs up through a hatch in the cage floor, steps off, and sits cross-legged.
-  Click **let go** then and he stands up, pushes the door open, crouches through, turns on the
-  edge of the cage, leans back on straight arms, lets go, and falls backwards head-first.
-- After a fall, clicking again starts the climb over.
+- Click **take the first step**: he lets go, pushes the door open, crouches in the doorway, looks up at the
+  balloon, unties it and jumps. For a moment he falls on the slack string; then it snaps taut and the balloon
+  carries him off on the breeze, out of the frame. *The door was never locked.*
+- Returning visitors skip the climb and find him already at the bars; **watch again** replays everything.
+- Below: work, services, about, and contact (where a small red balloon is waiting).
 
-> *Sometimes you have to let go of the life you planned to find the life that's waiting for you.*
-> (often attributed to Joseph Campbell)
+The logo is a folded shirt in my own plaid (navy and green blocks, blue stripes, a cream windowpane and one red
+thread), made by `tools/shirt_logo.py`; the man's shirt in the scene uses the same plaid.
 
 ## How it works
 
@@ -26,6 +27,7 @@ The page opens with him climbing the ladder toward the cage.
   climbs out of the cloud and falls back into it. Along the ladder the behind/in-front stretches are set by hand
   (`BEHIND` in `tools/clouds_front.py`) and switch at puff edges. The ladder ends, and the climb starts, inside the
   cloud; the climb runs faster while he is completely hidden (`HIDDEN_SPEED`) and is capped at `MAX_CLIMB` seconds.
+- **The balloon and the jump** are simulated: his hand falls under gravity, the balloon pulls up against air drag and a breeze, and the string between them only pulls when it is taut. The take-off starts from his exact pose and eases into the hang.
 - **Cage, chain, ladder and the man** are drawn live in 3D with [three.js](https://threejs.org) (r160, loaded from jsDelivr).
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
 - **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
@@ -62,9 +64,9 @@ The site appears at `https://<username>.github.io/<repository>/`.
 
 ```
 index.html           the homepage (HTML, CSS and the three.js scene in one file)
-assets/              the cut-out cloud and face textures
+assets/              the cut-out cloud, face textures, logo, favicons, contact balloon and share image (og.jpg)
 style-guide/         the visual style guide (palette, type, motifs, generator prompt)
-tools/               Python scripts: cut out the cloud (clouds.py), its front puffs (clouds_front.py), the face textures, the old plate clean-up
+tools/               Python scripts: cut out the cloud (clouds.py), its front puffs (clouds_front.py), the shirt logo (shirt_logo.py), the face textures, the old plate clean-up
 ```
 
 ## Tweaking
@@ -79,7 +81,9 @@ Most things are a single constant near the top of the script in `index.html`:
 | Sky colours | `skyRow()` in the background shader |
 | Man's size | `FIG_S` |
 | Bar thickness | `THICK` |
-| Timing of the sequence | the `body` keyframes, `T_STAND` and `T_LET` |
+| Timing of the sequence | the `body` keyframes and `T_LET` |
+| Balloon size, string slack, where it's tied | `BAL` (and `BAL.OFF` in `layout()`) |
+| Lift, gravity, wind, jump speed | `BS` (wind per screen in `layout()`) |
 | Climbing speed | `CLIMB_P` (seconds per two rungs) |
 
 ## License
