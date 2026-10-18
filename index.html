@@ -3,7 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GL</title>
+<title>Gonçalo Leal · software products</title>
+<meta name="description" content="I'm Gonçalo Leal. I design and build software products: for your business, and of my own.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gonçalo Leal · software products">
+<meta property="og:description" content="The door was never locked. I design and build software products: for your business, and of my own.">
+<meta property="og:image" content="https://gleal42.github.io/interactive-personal-portfolio/assets/og.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,700&display=swap">
@@ -41,21 +50,47 @@ body{background:var(--sky);color:var(--cloud);font-family:var(--serif);overflow-
 .sky::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
   background:linear-gradient(90deg,rgba(29,65,76,.5) 0%,rgba(29,65,76,.18) 36%,rgba(29,65,76,0) 52%)}
 
-nav{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+nav{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;
   padding:calc(22px + env(safe-area-inset-top,0px)) clamp(16px,5vw,64px) 0}
 nav a{color:var(--cloud);text-decoration:none;font-size:1.05rem;letter-spacing:.02em}
 nav a:hover{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
-nav .logo{font-size:1.9rem;letter-spacing:.06em;font-weight:400}
-nav .r{justify-self:end}
+/* the logo: the folded shirt (tools/shirt_logo.py), top left, in line with the text below. Just the shirt here:
+   the hero right under it already says the name. (Shirt + name is the version for documents and email.) */
+nav .brand{display:flex;align-items:center;gap:12px;font-size:1.55rem;letter-spacing:.01em}
+nav .brand img{width:56px;height:56px;display:block;margin-left:-4px}
+nav .brand:hover{text-decoration:none}
 
-.copy{position:relative;z-index:2;align-self:center;padding:0 clamp(16px,5vw,64px) 8vh;pointer-events:none}
-.copy .letgo{pointer-events:auto}
-h1{margin:0;font-weight:600;font-size:clamp(1.75rem,3.6vw,2.9rem);line-height:1.5;max-width:15em;text-wrap:balance;text-shadow:0 1px 18px rgba(20,45,52,.35)}
-h1 .line{display:block;opacity:0;transform:translateY(10px);animation:rise 1.1s cubic-bezier(.2,.7,.2,1) forwards}
-h1 .line:nth-child(2){animation-delay:.25s}
-h1 .line:nth-child(3){animation-delay:.5s}
-h1 .line:nth-child(4){animation-delay:.75s}
+.copy{position:relative;z-index:2;align-self:center;padding:0 clamp(16px,5vw,64px) 14vh;pointer-events:none;display:grid}
+.copy>*{grid-area:1/1}
+.copy .letgo,.copy a,.copy button{pointer-events:auto}
+.intro p{margin:0;text-shadow:0 1px 18px rgba(20,45,52,.35)}
+.hello{font-weight:600;font-size:clamp(1.75rem,3.6vw,2.9rem);line-height:1.3}
+.what{font-size:clamp(1.15rem,1.8vw,1.5rem);line-height:1.45;color:var(--cloud-dim);margin-top:10px!important;max-width:22em}
+.cta{margin-top:30px!important;font-size:clamp(1.3rem,2.2vw,1.8rem)}
+.line{opacity:0;transform:translateY(10px);animation:rise 1.1s cubic-bezier(.2,.7,.2,1) forwards}
+.intro .line:nth-child(2){animation-delay:.25s}
+.intro .line:nth-child(3){animation-delay:.6s}
 @keyframes rise{to{opacity:1;transform:none}}
+.intro{transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+.played .intro,.landed .intro{opacity:0;transform:translateY(-6px);pointer-events:none}
+.played .intro *,.landed .intro *{pointer-events:none}
+/* after he lands on the cloud: the line appears word group by word group, slow in, slower out */
+h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem);line-height:1.12;max-width:8em;text-wrap:balance;text-shadow:0 1px 22px rgba(20,45,52,.4)}
+.reveal{visibility:hidden}
+.reveal .w,.reveal .after,.reveal .bridge{display:inline-block;opacity:0;transform:translateY(12px);transition:opacity 1.2s cubic-bezier(.2,.7,.2,1),transform 1.2s cubic-bezier(.2,.7,.2,1)}
+.landed .reveal{visibility:visible}
+.landed .reveal .w,.landed .reveal .after{opacity:1;transform:none}
+.landed .reveal .w:nth-child(2){transition-delay:.35s}
+.landed .reveal .w:nth-child(3){transition-delay:.7s}
+.landed .reveal .after{transition-delay:1.7s}
+.after{display:flex!important;flex-wrap:wrap;align-items:center;gap:14px 28px;margin:30px 0 0;font-size:1.1rem}
+/* after the jump: one clear action, and a quiet way to see it again */
+.after .talk{font:600 1.1rem var(--serif);font-style:normal;text-decoration:none;color:#1d2927;background:var(--cloud);padding:11px 26px;border-radius:999px}
+.after .talk:hover{background:#fff}
+.after #again{font-size:1rem;color:var(--cloud-dim);text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.after #again:hover{color:var(--cloud)}
+.after a,.after button{font:inherit;font-style:italic;color:var(--cloud);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
+.after a:focus-visible,.after button:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
 
 .letgo{font:inherit;font-weight:700;font-style:italic;color:var(--cloud);background:none;border:0;padding:0 0 2px;cursor:pointer;position:relative;white-space:nowrap}
 .letgo::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--cloud);transform-origin:left;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
@@ -63,41 +98,68 @@ h1 .line:nth-child(4){animation-delay:.75s}
 .played .letgo::after{transform:none}
 .letgo:focus-visible{outline:2px solid var(--gold);outline-offset:6px;border-radius:2px}
 .hand{display:inline-block;width:.85em;height:.85em;margin-left:.3em;vertical-align:-.05em;animation:tap 2.4s ease-in-out infinite 1.6s}
-.played .hand{animation:none;opacity:.5}
+.played .hand,.waiting .hand{animation:none;opacity:.5}
 @keyframes tap{0%,60%,100%{transform:translate(0,0)}70%{transform:translate(-3px,-3px)}80%{transform:translate(0,0)}}
 .tallbr{display:none}
 .hint{margin-top:28px;font-size:1rem;font-style:italic;color:var(--cloud-dim);opacity:0;animation:rise 1s ease 1.4s forwards}
 .played .hint{visibility:hidden}
 
-#about{position:relative;z-index:2;padding:clamp(64px,10vw,120px) clamp(16px,5vw,64px)}
-#about .inner{max-width:38rem;display:grid;gap:18px}
-#about h2{margin:0;font-weight:600;font-size:clamp(1.8rem,3vw,2.4rem)}
-#about p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
-#about small{font-size:.95rem;color:var(--gold);font-style:italic}
+.sec{position:relative;z-index:2;padding:clamp(56px,8vw,96px) clamp(16px,5vw,64px)}
+#work{padding-top:clamp(64px,13vw,200px)}             /* below the base of the cloud */
+.sec a:not(.btn){color:var(--cloud);text-underline-offset:4px}
+.sec .inner.wide{max-width:64rem}
+.sec .lead{font-size:1.3rem;color:var(--cloud)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:8px}
+.card{border:1px solid rgba(243,235,224,.2);border-radius:10px;padding:22px 22px 24px;background:rgba(18,40,48,.38);display:grid;gap:8px;align-content:start}
+.card h3{margin:0;font-size:1.35rem;font-weight:600;line-height:1.25}
+.sec .card p{font-size:1.05rem;line-height:1.55}
+.card.todo{border-style:dashed;background:transparent}
+.card .tag{font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.btn{display:inline-block;justify-self:start;padding:12px 24px;border-radius:999px;background:var(--cloud);color:#1d2927;text-decoration:none;font-weight:600;font-size:1.1rem}
+.btn:hover{background:#fff}
+.btn:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+#contact .inner{grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:40px;max-width:46rem}
+#contact .inner>*{grid-column:1}
+.balloon-mark{grid-column:2!important;grid-row:1/span 4;width:64px;height:auto;animation:bob 6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+@media (max-width:560px){.balloon-mark{width:46px}#contact .inner{column-gap:18px}}
+.sec .inner{max-width:38rem;display:grid;gap:18px}
+.sec h2{margin:0;font-weight:600;font-size:clamp(1.8rem,3vw,2.4rem)}
+.sec p{margin:0;font-size:1.2rem;line-height:1.65;color:var(--cloud-dim)}
+/* the tabs, right; the shirt logo, left */
+nav .links{display:flex;gap:clamp(14px,2.6vw,36px)}
+nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
 
 /* phones held sideways: compact quote sized to the screen height, clouds pushed to the right */
 @media (min-aspect-ratio:1/1) and (max-height:560px){
   .sky{--cx:57vw;--cy:40vh;--cw:150vh}
   nav{padding-top:calc(10px + env(safe-area-inset-top,0px))}
   nav a{font-size:.9rem}
-  nav .logo{font-size:1.3rem}
-  .copy{padding-bottom:2vh}
-  h1{font-size:clamp(1rem,5.6vh,1.6rem);line-height:1.42;max-width:none}
-  .hint{margin-top:10px;font-size:.8rem}
+  nav .brand img{width:38px;height:38px}
+  .copy{padding-bottom:12vh}
+  .hello{font-size:clamp(1.2rem,7vh,1.8rem)}
+  .what{font-size:clamp(.9rem,4.4vh,1.1rem)}
+  .cta{margin-top:14px!important;font-size:clamp(1rem,5.6vh,1.4rem)}
+  h1{font-size:clamp(1.4rem,9vh,2.4rem)}
+  .after{margin-top:12px;font-size:.95rem}
 }
 @media (max-aspect-ratio:1/1){
-  .sky{--cx:-3vw;--cy:60vh;--cw:160vw}
   .sky::after{display:none}
-  .copy{align-self:start;padding-top:11vh}
-  h1{font-size:clamp(1.15rem,5.2vw,1.45rem);line-height:1.45;max-width:17em}
+  .copy{align-self:start;padding-top:14vh}
+  .intro,.reveal{max-width:62vw}                  /* phones: the words keep to the left, the cage and its chain to the right */
+  .hello{font-size:clamp(1.5rem,7vw,1.9rem)}
+  .what{font-size:clamp(1.05rem,4.6vw,1.25rem)}
+  .cta{margin-top:20px!important;font-size:clamp(1.25rem,5.6vw,1.5rem)}
+  h1{font-size:clamp(2.1rem,10vw,2.8rem)}
   .tallbr{display:inline}
-  .hint{margin-top:14px;font-size:.88rem}
   nav{padding-top:calc(16px + env(safe-area-inset-top,0px))}
   nav a{font-size:.95rem}
-  nav .logo{font-size:1.45rem}
+  nav .brand img{width:44px;height:44px}
 }
 @media (prefers-reduced-motion:reduce){
-  h1 .line,.hint{animation:none;opacity:1;transform:none}
+  .line{animation:none;opacity:1;transform:none}
+  .reveal .w,.reveal .after,.reveal .bridge,.intro{transition:none!important}
+  .balloon-mark{animation:none!important}
   .hand{animation:none}
 }
 </style>
@@ -105,29 +167,83 @@ h1 .line:nth-child(4){animation-delay:.75s}
 <body>
 
 <div class="sky" id="sky">
-<canvas id="scene" aria-label="A man in a green plaid shirt stands in an old bronze birdcage hanging in the sky. When you let go, he crouches through the door, holds the bars from outside, leans back and lets go, falling backwards slowly through the clouds."></canvas>
+<canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a cloud into an old bronze birdcage hanging in the sky, where a red balloon is tied. When you open the door, he unties the balloon and jumps; for a moment he falls, then the balloon catches him and carries him up and out of sight."></canvas>
 <div class="stage" id="stage">
   <nav>
-    <a href="#top">home</a>
-    <a class="logo" href="#top" aria-label="GL, home">GL</a>
-    <a class="r" href="#about">about</a>
+    <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="56" height="56"></a>
+    <div class="links"><a href="#work">work</a><a href="#services">services</a><a href="#about">about</a><a href="#contact">contact</a></div>
   </nav>
   <div class="copy" id="top">
-    <h1>
-      <span class="line">Sometimes you have<br class="tallbr"> to <button class="letgo" id="letgo" type="button" aria-label="let go (plays the animation)">let go</button><svg class="hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0v3.5a6 6 0 0 1-6 6h-1.2a5 5 0 0 1-3.9-1.9L4.6 15a1.5 1.5 0 0 1 2.3-1.9L9 15"/><path d="M4 4l1.5 1.5M9.5 1.5V2.5M14.5 3.5l-1 1"/></svg></span>
-      <span class="line">of the life you planned</span>
-      <span class="line">to find the life</span>
-      <span class="line">that's waiting for you</span>
-    </h1>
-    <p class="hint">Tap "let go".</p>
+    <div class="intro">
+      <p class="hello line">Hi, I'm Gonçalo.</p>
+      <p class="what line">I design and build software products: for your business, and of my own.</p>
+      <p class="cta line"><button class="letgo" id="letgo" type="button" aria-label="take the first step (plays the animation)">take the first step</button><svg class="hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0v3.5a6 6 0 0 1-6 6h-1.2a5 5 0 0 1-3.9-1.9L4.6 15a1.5 1.5 0 0 1 2.3-1.9L9 15"/><path d="M4 4l1.5 1.5M9.5 1.5V2.5M14.5 3.5l-1 1"/></svg></p>
+    </div>
+    <div class="reveal" aria-live="polite">
+      <h1><span class="w">The door</span> <span class="w">was never</span> <span class="w">locked.</span></h1>
+      <p class="after"><a class="talk" href="#contact">let's talk</a><button id="again" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>watch again</button></p>
+    </div>
   </div>
 </div>
 
-<section id="about">
+<section id="work" class="sec">
+  <div class="inner wide">
+    <h2>work</h2>
+    <p class="lead">Things I've built.</p>
+    <div class="cards">
+      <article class="card">
+        <span class="tag">3D · web</span>
+        <h3>This website</h3>
+        <p>An interactive story in three.js: a character modelled on me, simulated physics for the jump, and a red balloon.</p>
+      </article>
+      <!-- To add: two real projects, each as a card like the one above (the problem, the build, the result).
+      <article class="card">
+        <span class="tag">[type]</span>
+        <h3>[A project you're proud of]</h3>
+        <p>[What was stuck. What you built. What changed, with a number if you have one.]</p>
+      </article>
+      -->
+      <article class="card">
+        <span class="tag">my own products</span>
+        <h3>In the works</h3>
+        <p>I'm building software products of my own. Follow along on <a href="https://www.linkedin.com/in/goncaloleal" rel="me noopener" target="_blank">LinkedIn</a>.</p>
+      </article>
+    </div>
+  </div>
+</section>
+<section id="services" class="sec">
+  <div class="inner wide">
+    <h2>services</h2>
+    <p class="lead">What I can build for you.</p>
+    <div class="cards">
+      <article class="card">
+        <h3>Your product, from idea to launch</h3>
+        <p>A web app or tool designed, built and shipped: a first version you can put in front of real users.</p>
+      </article>
+      <article class="card">
+        <h3>Automation and AI agents</h3>
+        <p>Software that takes repetitive work off your plate: agents, integrations and pipelines that run on their own.</p>
+      </article>
+      <article class="card">
+        <h3>Internal tools</h3>
+        <p>Dashboards and small apps your team will actually use, including Microsoft Power Apps.</p>
+      </article>
+    </div>
+  </div>
+</section>
+<section id="about" class="sec">
   <div class="inner">
     <h2>about</h2>
-    <p>This is where your story goes: who you are, what you left behind, and what you're building now.</p>
-    <small>Quote often attributed to Joseph Campbell.</small>
+    <p>I'm Gonçalo Leal, a software developer based in Portugal, with a master's in management and international business strategy. So I think about what a product has to do for the business, not only how to build it.</p>
+    <!-- To add: a line or two of your story: what you left behind, and what you're building now. -->
+  </div>
+</section>
+<section id="contact" class="sec">
+  <div class="inner">
+    <img class="balloon-mark" src="assets/balloon.png" alt="" width="64" height="167">
+    <h2>Where to next?</h2>
+    <p>Tell me what you'd like to build. The quickest way to reach me is LinkedIn.</p>
+    <a class="btn" href="https://www.linkedin.com/in/goncaloleal" rel="me noopener" target="_blank">Message me on LinkedIn</a>
   </div>
 </section>
 </div>
@@ -146,7 +262,7 @@ function skyLayout(W,H){             // H = height of the first screen
   if(portrait){by=H*.38;bh=H*.62;px=.85;py=1;}
   else if(shortWide){bx=W*.34;bw=W*.66;px=.6;}     // phone sideways: keep the cloud to the right of the quote
   const k=Math.max(bw/SKY.PW,bh/SKY.PH), x0=bx+(bw-SKY.PW*k)*px, y0=by+(bh-SKY.PH*k)*py;
-  const sx=portrait?W*.65:x0+SKY.ANCHOR.x*k, sy=y0+(SKY.ANCHOR.y+(portrait?60:shortWide?95:0))*k;   // phones: hang the cage lower, clear of the text and menu
+  const sx=portrait?W*.72:x0+SKY.ANCHOR.x*k, sy=y0+(SKY.ANCHOR.y+(portrait?140:shortWide?95:115))*k;   // lower than it used to be: the cage is bigger now; on phones it hangs below the text
   // the cloud's peak sits right under the cage; the cloud is big and may run off the right edge and below
   // the fold (scrolling reveals the rest of it)
   const w=portrait?W*1.6:H*1.5, s=w/SKY.CW;
@@ -162,7 +278,7 @@ function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(
 import * as THREE from "three";
 
 /* ---------- constants (units = px of the 1280x720 layout frame, see SKY above) ---------- */
-const CAGE_SCALE_WIDE=.34, CAGE_SCALE_TALL=.62;   // smaller on wide screens, bigger on phones
+const CAGE_SCALE_WIDE=.44, CAGE_SCALE_TALL=.85;   // smaller on wide screens, bigger on phones
 const PIVOT=3600;                    // chain pivot height above the cage base
 const R=84, STRAIGHT=150, DOME=74, NB=36, S=2*Math.PI/NB, MID=30;
 const DOOR=1.2;                      // door faces right, turned a little toward the camera
@@ -234,16 +350,17 @@ function canvasTex(w,h,draw,repeat=[1,1],srgb=true){const c=document.createEleme
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;}
 function noise(g,w,h,amt,alpha=.12){const d=g.getImageData(0,0,w,h);for(let i=0;i<d.data.length;i+=4){const n=(Math.random()-.5)*amt;d.data[i]+=n;d.data[i+1]+=n;d.data[i+2]+=n;}g.putImageData(d,0,0);}
 // green flannel plaid, like his shirt
+// his shirt: the same plaid as the logo (tools/shirt_logo.py): navy and forest-green blocks, blue stripes,
+// a thin cream windowpane and one red thread; 2/2 twill, brushed
 const plaid=canvasTex(256,256,(g,w,h)=>{
-  g.fillStyle="#3a4a40";g.fillRect(0,0,w,h);
-  const band=(pos,size,col,a)=>{g.globalAlpha=a;g.fillStyle=col;g.fillRect(pos,0,size,h);g.fillRect(0,pos,w,size);};
-  band(0,64,"#17251f",.6); band(128,64,"#17251f",.6);
-  band(96,10,"#7a8a82",.4); band(224,10,"#7a8a82",.4);
-  band(40,3,"#aeb5aa",.3); band(168,3,"#aeb5aa",.3);
-  band(70,22,"#526459",.35); band(198,22,"#526459",.35);
-  g.globalAlpha=1; noise(g,w,h,26);
-  g.globalAlpha=.08;g.strokeStyle="#000";for(let i=-h;i<w;i+=3){g.beginPath();g.moveTo(i,0);g.lineTo(i+h,h);g.stroke();}
-},[5,3]);
+  const C={navy:[30,38,62],ink:[20,25,40],blue:[50,74,128],green:[48,74,52],cream:[214,216,200],red:[178,58,46]};
+  const seq=[["ink",16],["blue",3],["navy",1],["red",1],["navy",1],["blue",3],["ink",16],["green",24],["cream",2],["green",24]];
+  const st=[]; seq.forEach(([c,n])=>{for(let i=0;i<n;i++)st.push(C[c]);});
+  const P=st.length, d=g.createImageData(w,h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const a=st[Math.floor(x/w*P)],b=st[Math.floor(y/h*P)],t=((x>>1)+(y>>1))&1,k=(y*w+x)*4,n=1+(Math.random()-.5)*.1;
+    for(let c=0;c<3;c++)d.data[k+c]=(.5*(t?a[c]:b[c])+.25*(a[c]+b[c]))*n; d.data[k+3]=255;}
+  g.putImageData(d,0,0);
+},[3,2]);
 // worn blue denim
 const denim=canvasTex(256,256,(g,w,h)=>{
   g.fillStyle="#242c3d";g.fillRect(0,0,w,h);
@@ -288,13 +405,13 @@ const stage=new THREE.Group(); scene.add(stage);      // scaled so 1 unit = 1 pl
 const hang=new THREE.Group(); hang.position.y=PIVOT; stage.add(hang);
 const cage=new THREE.Group(); cage.position.y=-PIVOT; hang.add(cage);
 
-scene.add(new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9));
+{const hl=new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9); hl.layers.enableAll(); scene.add(hl);}
 scene.fog=new THREE.Fog(0x6b8f99,0,3000/0.11);   // ~20% haze toward the sky colour, like the clouds
-const sun=new THREE.DirectionalLight(0xffe2c6,2.6); scene.add(sun); scene.add(sun.target);
+const sun=new THREE.DirectionalLight(0xffe2c6,2.6); sun.layers.enableAll(); scene.add(sun); scene.add(sun.target);
 sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004;
 const SUN_DIR=new THREE.Vector3(-0.75,1.05,1.15).normalize();
-const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
-const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
+const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.layers.enableAll(); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
+const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.layers.enableAll(); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
 
 const add=(parent,m,cast=true,recv=true)=>{m.castShadow=cast;m.receiveShadow=recv;parent.add(m);return m;};
 const P=(a,y,r=R)=>new THREE.Vector3(r*Math.sin(a),y,r*Math.cos(a));
@@ -303,6 +420,12 @@ function tube(points,rad,mat,seg){const c=new THREE.CatmullRomCurve3(points);con
 function arc(a0,a1,y,r=R,n=48){const pts=[];for(let i=0;i<=n;i++)pts.push(P(a0+(a1-a0)*i/n,y,r));return pts;}
 function ring(y,r,rad,mat){const m=new THREE.Mesh(new THREE.TorusGeometry(r,rad*THICK,14,128),mat);m.rotation.x=Math.PI/2;m.position.y=y;m.castShadow=m.receiveShadow=true;return m;}
 const BAR=2.1;
+// the chain can fade out above the cage (phones: so it doesn't run through the words above it)
+const CHAIN_FADE={value:new THREE.Vector2(1e5,2e5)};
+const chainM=bronze.clone(); chainM.transparent=true;
+chainM.onBeforeCompile=sh=>{sh.uniforms.chainFade=CHAIN_FADE;
+  sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying float vChainY;").replace("#include <begin_vertex>","#include <begin_vertex>\nvChainY=(instanceMatrix*vec4(transformed,1.)).y;");
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform vec2 chainFade;varying float vChainY;").replace("#include <dithering_fragment>","gl_FragColor.a*=1.-smoothstep(chainFade.x,chainFade.y,vChainY);\n#include <dithering_fragment>");};
 
 /* cage: base, bars, dome, rings */
 const HATCH=27;   // round opening in the floor where the ladder comes up
@@ -328,7 +451,7 @@ add(cage,new THREE.Mesh(new THREE.ConeGeometry(5,9,20),bronze)).position.y=STRAI
 add(cage,new THREE.Mesh(new THREE.TorusGeometry(14,1.6,12,48),bronze)).position.y=STRAIGHT+DOME+22;
 {const linkG=new THREE.TorusGeometry(3.2,.85,8,20);linkG.scale(1,1.6,1);
  const y0=STRAIGHT+DOME+38, n=Math.ceil((PIVOT-y0)/8.6)+2;
- const links=new THREE.InstancedMesh(linkG,bronze,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
+ const links=new THREE.InstancedMesh(linkG,chainM,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
  for(let i=0;i<n;i++){e.set(0,i%2?Math.PI/2:0,0);q.setFromEuler(e);m.compose(new THREE.Vector3(0,y0+i*8.6,0),q,new THREE.Vector3(1,1,1));links.setMatrixAt(i,m);}
  cage.add(links);}
 /* door on a hinge */
@@ -485,35 +608,26 @@ function track(keys){
 const DC=DOOR, OUT=DC+Math.PI;
 // body: [t, root r, root angle, hips height, facing, spine bend, lean back, head nod, head turn]
 const body=track([
-  [-1,  24,.30,10,.30, .08,  0,   .06,0],     // sitting cross-legged on the cage floor
-  [0,   24,.30,10,.30, .08,  0,   .06,0],
-  [.6,  24,.30,10,.32, .10,  0,  -.04,.75],   // looks toward the door
-  [1.35,27,.30,15,.30, .48,  0,   .12,.25],   // leans forward, feet come under him
-  [1.95,33,.30,42,.30, .42,  0,   .10,0],     // pushes up through his legs
-  [2.55,40,.30,73.5,.32,.05, 0,  -.05,.3],    // standing
-  [2.95,42,.50,73,.55, .06,  0,  -.05,.6],    // leans in and pushes the door open
-  [3.45,34,.90,66,1.0, .15,  0,   0,.2],      // steps toward the doorway
-  [3.9, 36,1.18,48,1.20,.50, 0,   .28,0],     // crouches low before reaching the door
-  [4.4, 58,1.20,46,1.20,.55, 0,   .30,0],     // duck-walks under the top of the door
-  [4.75,78,1.20,47,1.55,.42,-.02, .15,-.15],  // half out, still low
-  [5.45,94,1.20,42,3.3, .20,-.12, .05,-.3],   // turns slowly while staying low
-  [5.95,94,1.20,58,OUT-.25,.06,-.17,0,-.1],   // facing the cage, leans back and rises
-  [6.4, 93,1.20,72,OUT, .03,-.13,-.05,0],     // heels over the edge
-  [7.1, 92,1.20,74,OUT, .02,-.11,-.28,0],     // glances up at the sky
-  [8.0, 92,1.20,74,OUT, .00,-.34, .10,0],     // leans back until his arms are straight
-  [8.2, 92,1.20,74,OUT,-.02,-.40, .16,0]]);   // lets go
-const T_STAND=2.55, T_LET=8.2;
-
-/* after he lets go he tips backwards around his heels like a falling plank, then leaves the rim */
-const PIV=(()=>{let th=-.40,w=-.32;const c=1.5,dt=1/240,tab=[[0,th,w]];
-  for(let t=dt;t<4;t+=dt){w+=c*Math.sin(th)*dt;th+=w*dt;tab.push([t,th,w]);if(th<-1.02)break;}
-  return tab;})();
-const T_PIVOT=PIV[PIV.length-1][0];
-function pivotAt(u){const i=Math.min(PIV.length-1,Math.max(0,Math.round(u*240)));return PIV[i];}
-T_RELEASE=T_LET+T_PIVOT;
+  [-1,  64,0,  73.5,0,   .02, 0,  -.05,0],     // standing at the front bars, hands on them, facing you
+  [0,   64,0,  73.5,0,   .02, 0,  -.05,0],
+  [.45, 62,.05,73.5,.25, .03, 0,  -.08,.55],   // lets go and looks toward the door
+  [1.0, 48,.25,73.5,.35, .05, 0,  -.05,.4],    // turns and steps toward it
+  [1.35,42,.40,73.5,.45, .05, 0,  -.05,.55],
+  [1.75,42,.50,73,.55, .06,  0,  -.05,.6],     // leans in and pushes the door open
+  [2.25,34,.90,66,1.0, .15,  0,   0,.2],       // steps toward the doorway
+  [2.7, 36,1.18,48,1.20,.50, 0,   .28,0],      // crouches low before reaching the door
+  [3.2, 58,1.20,46,1.20,.55, 0,   .30,0],      // duck-walks under the top of the door
+  [3.75,74,1.20,46,1.20,.50, 0,   .05,0],      // crouched in the doorway
+  [4.15,75,1.20,48,1.20,.42, 0,  -.25,0],      // lifts his head and looks out at the sky
+  [4.45,75,1.22,52,1.24,.30, 0,  -.45,.35],    // looks up at the balloon tied beside the door
+  [4.85,75,1.20,52,1.20,.30, 0,  -.3,.2],      // unties it, the string in his hand
+  [5.2, 74,1.20,45,1.20,.52,.04,  .02,0],      // sinks lower, winding up
+  [5.45,78,1.20,52,1.20,.38,.10, -.08,0]]);    // springs out
+const T_STAND=0, T_LET=5.45;
+T_RELEASE=T_LET;
 
 function bodyAt(t){
-  if(t>T_LET){const b=bodyAt(T_LET),[,th,w]=pivotAt(t-T_LET);b.tip=th;b.spX=-.05;b.hdX=.22;return b;}
+  if(t>T_LET)return bodyAt(T_LET);
   const [r,a,hy,yaw,spX,tip,hdX,hdY]=body(t);return {root:polar(r,a,FLOOR),hy,yaw,spX,tip,hdX,hdY};}
 function footFromBody(t,side,fwd){const b=bodyAt(t);return {p:b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),fwd*FIG_S),yaw:b.yaw};}
 
@@ -526,10 +640,9 @@ function sittingFoot(t,side){            // ankles crossed in front, sliding bac
   const p=cross.lerp(under,kk); p.y+=4*Math.sin(Math.PI*kk)*FIG_S;
   return {p,yaw:mix(b.yaw-1.15*side,b.yaw,kk),cross:1-kk};}
 const STEPS={
-  L:[{t:-1,...footFromBody(T_STAND,1,2)},{a:3.0,t:3.4,...footFromBody(3.5,1,4)},{a:3.9,t:4.3,...footFromBody(4.45,1,6)},
-     {a:4.6,t:5.05,p:polar(89,DC+.03,FLOOR),yaw:1.9},{a:5.55,t:5.95,p:polar(91,DC-.11,FLOOR),yaw:OUT}],
-  R:[{t:-1,...footFromBody(T_STAND,-1,2)},{a:3.4,t:3.85,...footFromBody(3.95,-1,4)},{a:4.3,t:4.7,p:polar(87,DC-.08,FLOOR),yaw:1.4},
-     {a:5.1,t:5.55,p:polar(91,DC+.11,FLOOR),yaw:OUT-.2},{a:5.95,t:6.15,p:polar(91,DC+.11,FLOOR),yaw:OUT}]};
+  L:[{t:-1,...footFromBody(0,1,2)},{a:.45,t:.9,...footFromBody(1.35,1,2)},{a:1.8,t:2.2,...footFromBody(2.3,1,4)},{a:2.7,t:3.1,...footFromBody(3.25,1,6)},
+     {a:3.35,t:3.75,...footFromBody(3.75,1,3)}],
+  R:[{t:-1,...footFromBody(0,-1,2)},{a:.7,t:1.15,...footFromBody(1.35,-1,2)},{a:2.2,t:2.65,...footFromBody(2.75,-1,4)},{a:3.1,t:3.55,...footFromBody(3.75,-1,3)}]};
 function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
   if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw};
@@ -541,24 +654,24 @@ function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
 /* hands: on his knees while sitting, then the door, the door frame and the bars */
 const nearestBar=a=>off+Math.round((a-off)/S)*S;
 const DOOR_BAR=DOOR-.5*S;
-function doorAngleAt(t){if(t===null||t<2.75)return 0;const u=t-2.75;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
+const BAR_L=polar(R,off-4*S,FLOOR+118), BAR_R=polar(R,off-7*S,FLOOR+118);   // two front bars at chest height, about shoulder width apart
+function doorAngleAt(t){if(t===null||t<1.55)return 0;const u=t-1.55;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
 function doorBarAt(t,y){const a=openSign*doorAngleAt(t);return polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);}
 const _kp=new THREE.Vector3();
 function kneeHand(leg){return ()=>{leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;return _kp.clone();};}
 function relaxedHand(side){return t=>{const b=bodyAt(Math.max(0,t));return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};}
 let GRIP=null;
 function buildGrips(){GRIP={
-  L:[{t:-1,p:kneeHand(L.leg)},
-     {a:1.85,t:2.45,p:relaxedHand(1)},
-     {a:2.45,t:2.75,p:t=>doorBarAt(t,112)},             // pushes the door open
-     {a:3.15,t:3.55,p:relaxedHand(1)},
-     {a:3.95,t:4.3,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
-     {a:5.2,t:5.7,p:()=>polar(R,hingeA,112)},
+  L:[{t:-1,p:()=>BAR_L},                                // holding the front bars
+     {a:.3,t:.75,p:relaxedHand(1)},
+     {a:1.25,t:1.55,p:t=>doorBarAt(t,112)},             // pushes the door open
+     {a:1.95,t:2.35,p:relaxedHand(1)},
+     {a:2.75,t:3.1,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
+     {a:4.2,t:4.55,p:t=>BAL_HOOK.clone().add(V3(1.5*Math.sin(t*23),2.4*Math.sin(t*29),0).multiplyScalar(clamp01((t-4.55)/.1)*clamp01((4.95-t)/.1)))},   // then the balloon's knot on the ring: he unties it
      {a:T_LET,t:1e9,p:null}],
-  R:[{t:-1,p:kneeHand(Rt.leg)},
-     {a:1.85,t:2.45,p:relaxedHand(-1)},
-     {a:3.95,t:4.35,p:()=>polar(R,hingeA,96)},
-     {a:4.95,t:5.5,p:()=>polar(R,freeA,112)},
+  R:[{t:-1,p:()=>BAR_R},
+     {a:.35,t:.8,p:relaxedHand(-1)},
+     {a:2.75,t:3.15,p:()=>polar(R,hingeA,96)},           // the hinge side of the frame
      {a:T_LET,t:1e9,p:null}]};}
 function handAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
   const cur=list[i],nx=list[i+1];
@@ -624,7 +737,7 @@ function poseOnCage(t,clock){
   // feet and legs
   for(const [leg,list,side] of [[L.leg,STEPS.L,1],[Rt.leg,STEPS.R,-1]]){
     let f,cross=0;
-    if(tt<T_STAND){const s=sittingFoot(tt<0?0:tt,side);f=s;cross=s.cross;} else f=footAt(list,tt);
+    f=footAt(list,tt);
     const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
     const poleL=V3(mix(.15,1.1,cross)*side,mix(-.2,.35,cross),mix(1,.45,cross));
     const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
@@ -645,21 +758,108 @@ function poseOnCage(t,clock){
   return b;
 }
 
-/* ---------- the fall: centre of mass leaves the rim with the speed of his tipping, then gravity ---------- */
-const FALL_LEGS={lHx:-.16,lK:.2,rHx:-.06,rK:.12,ank:.15};
+const T_PIVOT=0;
 let rel=null;
+
+/* ---------- the red balloon: tied to the cage's top ring by the door, bobbing above it the whole time ----------
+   It lives in the stage (not the cage) so it can leave with him; before that it is pinned to the knot on the ring. */
+const BAL={R:34, SLACK:62, OFF:V3(104,34,34)};     // OFF: out to the right in a breeze, beside the cage and clear of the menu
+const balM=new THREE.MeshPhysicalMaterial({color:0xa8000b,roughness:.42,metalness:0,clearcoat:.45,clearcoatRoughness:.35,envMapIntensity:.45,transparent:true,opacity:.86,depthWrite:false});   // deep red latex, a soft sheen, a little see-through
+const strM=new THREE.MeshStandardMaterial({color:0xece2d4,roughness:.8});
+const bal=new THREE.Group();                          // origin at the knot, +y up through the balloon
+{// a latex balloon: round on top, a little longer and narrower underneath, pinched into the knot
+ const Rb=BAL.R, pts=[], N=64, lift=1.3*Rb+Rb*.16;
+ for(let i=0;i<=N;i++){const th=Math.PI*(1-i/N), c=Math.cos(th), lo=Math.max(0,c);
+   const x=Rb*Math.sin(th)*(1-.24*Math.pow(lo,2.4)), y=-Rb*c*(1+.3*Math.pow(lo,1.2));
+   pts.push(new THREE.Vector2(Math.max(x,.4),y+lift));}
+ const m=new THREE.Mesh(new THREE.LatheGeometry(pts,72),balM); m.castShadow=true; bal.add(m);
+ const knot=new THREE.Mesh(new THREE.SphereGeometry(Rb*.085,16,10),balM); knot.scale.set(1,.8,1); knot.position.y=Rb*.1; bal.add(knot);
+ const lip=new THREE.Mesh(new THREE.TorusGeometry(Rb*.07,Rb*.03,8,20),balM); lip.rotation.x=Math.PI/2; lip.position.y=Rb*.04; bal.add(lip);}
+stage.add(bal);
+let strMesh=null;
+function setString(a,b,len){                          // the string from a to b; it sags when slack
+  const d=a.distanceTo(b), sag=Math.sqrt(Math.max(0,len*len-d*d))*.5, pts=[];
+  for(let i=0;i<=16;i++){const t=i/16,p=a.clone().lerp(b,t);p.y-=sag*4*t*(1-t);pts.push(p);}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),40,.75,6,false);
+  if(strMesh){strMesh.geometry.dispose();strMesh.geometry=g;}else{strMesh=new THREE.Mesh(g,strM);strMesh.castShadow=true;stage.add(strMesh);}}
+const HOOK_A=DC+.27;                                  // on the top ring, over the left side of the doorway
+const BAL_HOOK=polar(R,HOOK_A,STRAIGHT+2);
+const _hk=new THREE.Vector3();
+function tetheredBalloon(clock){                      // tied on: bobbing, leaning a little away from the knot
+  stage.updateMatrixWorld(true);
+  const h=stage.worldToLocal(cage.localToWorld(_hk.copy(BAL_HOOK)));
+  const b=h.clone().add(BAL.OFF).add(V3(6*Math.sin(clock*.7),7*Math.sin(clock*1.1+1),5*Math.sin(clock*.5+2)));
+  bal.position.copy(b); bal.quaternion.setFromUnitVectors(V3(0,1,0),b.clone().sub(h).normalize());
+  setString(h,b,h.distanceTo(b)+3);}
+function setOut(on){const n=on?1:0; for(const o of [fig,bal]) o.traverse(c=>c.layers.set(n)); if(strMesh)strMesh.layers.set(n);}   // drawn in front of the cloud once he is out
+
+/* ---------- the jump: a short drop, then the balloon takes him ----------
+   Simulated: his hand (where his weight hangs) falls under gravity; the balloon pulls up (lift) against air drag; the
+   string between them only pulls when it is taut. He unties it with some slack in hand, so for a moment he simply
+   falls; then the string snaps taut, the jolt slows him, and the two rise together, drifting with the wind, up and
+   out of the frame. His body hangs from his hand along the string and swings after the jolt; his legs trail. */
+const BS={G:300, MM:1, MB:.25, LIFT:1350, CM:.25, CB:6, WIND:230, VOUT:120, VUP:125, DT:1/240};
+const qZ=z=>new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),z), qY=y=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),y);
+function legsFK(a,spread,swing=0,point=0){            // both legs bent by a (0 = straight); returns the hip height
+  for(const [leg,side] of [[L.leg,1],[Rt.leg,-1]]){
+    leg.h.quaternion.setFromEuler(_e.set(-a,0,spread*side+swing)); leg.k.quaternion.setFromEuler(_e.set(2*a,0,0)); leg.a.quaternion.setFromEuler(_e.set(-a+point,0,0));}
+  return ANKLE+(THIGH+SHIN)*Math.cos(a);}
+function armTo(arm,pW,pole){                          // solve one arm onto a stage-space point
+  const tW=stage.localToWorld(pW.clone()); arm.s.getWorldPosition(_t);
+  solveLimb(arm.s,arm.e,ARM1,ARM2,tW,_t.clone().add(pole.applyQuaternion(fig.getWorldQuaternion(_q)).multiplyScalar(80)),-1); arm.w.rotation.set(.2,0,0);}
 function captureRelease(clock){
-  const pelAt=tt=>{const sw=swayAt(tt,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
-    poseOnCage(tt,clock); fig.updateMatrixWorld(true); const p=new THREE.Vector3(); hips.getWorldPosition(p); stage.worldToLocal(p); return p;};
-  const dtv=1/60, pPrev=pelAt(T_RELEASE-dtv-1e-3), pel=pelAt(T_RELEASE-1e-3);
-  const vel=pel.clone().sub(pPrev).divideScalar(dtv);
-  const o=massOffset(); relTilt={x:o.x,z:o.z};
-  const qs=new THREE.Quaternion(); fig.getWorldQuaternion(qs); const qstage=new THREE.Quaternion(); stage.getWorldQuaternion(qstage); qs.premultiply(qstage.invert());
-  const bones=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone());
-  const w0=pivotAt(T_PIVOT)[2], tip0=pivotAt(T_PIVOT)[1];
-  stage.add(fig);
-  rel={pel,vel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x,w0,tip0};
+  const sw=swayAt(T_LET-1e-3,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
+  tetheredBalloon(clock); poseOnCage(T_LET-1e-3,clock); fig.updateMatrixWorld(true);
+  const hand=new THREE.Vector3(); L.arm.w.getWorldPosition(hand); stage.worldToLocal(hand);
+  const p0=new THREE.Vector3(); fig.getWorldPosition(p0); stage.worldToLocal(p0);
+  const q0=new THREE.Quaternion(); fig.getWorldQuaternion(q0); q0.premultiply(stage.getWorldQuaternion(new THREE.Quaternion()).invert());
+  const o=massOffset(); relTilt={x:-o.x*2.5,z:-o.z*2.5};          // pushing off kicks the cage back a little
+  stage.add(fig); setOut(true);
+  const off0=hand.clone().sub(p0).applyQuaternion(q0.clone().invert()).divideScalar(FIG_S);   // where his hand is, in his own frame
+  rel={h0:hand,b0:bal.position.clone(),LS:hand.distanceTo(bal.position)+BAL.SLACK,p0,q0,off0,hy0:hips.position.y,
+       legs:[L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone()),
+       v0:fwdOf(DC).multiplyScalar(BS.VOUT).add(V3(0,BS.VUP,0)),arms:[Rt.arm.s,Rt.arm.e].map(o=>o.quaternion.clone()),
+       spX:spine.rotation.x,hdX:head.rotation.x,sim:null};
 }
+function simStep(s,dt){
+  s.vh.y-=BS.G*dt; s.vh.multiplyScalar(1-BS.CM*dt/BS.MM); s.h.addScaledVector(s.vh,dt);
+  s.vb.y+=(BS.LIFT-BS.G*BS.MB)/BS.MB*dt; s.vb.x+=BS.WIND/BS.MB*dt; s.vb.multiplyScalar(1-Math.min(.9,BS.CB/BS.MB*dt)); s.b.addScaledVector(s.vb,dt);
+  const d=s.b.clone().sub(s.h), l=d.length(), rl=s.LS;
+  if(l>rl){const n=d.divideScalar(l), ex=l-rl, wb=(1/BS.MB)/(1/BS.MB+1/BS.MM);
+    s.b.addScaledVector(n,-ex*wb); s.h.addScaledVector(n,ex*(1-wb));
+    const rv=s.vb.clone().sub(s.vh).dot(n);
+    if(rv>0){const j=rv/(1/BS.MB+1/BS.MM)*1.1; s.vb.addScaledVector(n,-j/BS.MB); s.vh.addScaledVector(n,j/BS.MM); if(s.tc===null)s.tc=s.u;}}
+  s.u+=dt;}
+function poseBalloon(u,clock){
+  const r=rel;
+  if(!r.sim||u<r.sim.u-1e-6) r.sim={u:0,h:r.h0.clone(),vh:r.v0.clone(),b:r.b0.clone(),vb:V3(0,0,0),LS:r.LS,tc:null};
+  const s=r.sim; while(s.u<u&&s.u<30) simStep(s,BS.DT);
+  const h=s.h, b=s.b, dir=b.clone().sub(h).normalize(), taut=h.distanceTo(b)>=s.LS-1.5;
+  const w=s.tc===null?-1:u-s.tc;                                   // seconds since the string caught him
+  const lag=w<0?0:.3*Math.sin(2.3*w)*Math.exp(-.55*w)+.04*Math.sin(clock*.9);   // the swing after the jolt, then a slow sway
+  const up=V3(0,1,0).lerp(dir,w<0?.25:smooth(w/.25)).normalize();
+  const yaw=mix(DC,.3,smoother((u-.3)/2.4));
+  // everything starts exactly from his take-off pose and eases into the hanging pose (no jump cut)
+  const kb=smoother(u/.5);
+  const qT=qZ(lag).multiply(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0),up)).multiply(qY(yaw));
+  const q=r.q0.clone().slerp(qT,kb);
+  const a=w<0?mix(.12,.5,smooth(u/.4)):mix(.5,.14,smooth(w/1.2))+.04*Math.sin(clock*1.2);
+  const hyT=legsFK(a,.07,-1.4*lag,.35*smooth(u/.6)), hy=mix(r.hy0,hyT,kb); hips.position.y=hy;
+  [L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{_qq.copy(o.quaternion);o.quaternion.copy(r.legs[i]).slerp(_qq,kb);});
+  const off=r.off0.clone().lerp(V3(12,hy+92,4),kb).multiplyScalar(FIG_S);
+  fig.quaternion.copy(q); fig.position.copy(h).sub(off.applyQuaternion(q));
+  spine.rotation.set(mix(r.spX,.03-.4*lag,kb),0,0);
+  head.rotation.set(mix(r.hdX,w<0?-.2:-.55,smooth(u/.6)),.15*Math.sin(clock*.3)*smooth(w/2),0);
+  fig.updateMatrixWorld(true);
+  armTo(L.arm,h.clone(),V3(.9,-.3,-.3));
+  const ra=w<0?[-2.3,0,-.5,-.3]:[mix(-2.3,-.45,smooth(w/.8)),0,mix(-.5,-1.05,smooth(w/.8)),-.5];   // his free arm flies up in the drop, then rests out to the side
+  _qq.setFromEuler(_e.set(ra[0],ra[1],ra[2])); Rt.arm.s.quaternion.copy(r.arms[0]).slerp(_qq,smooth(u/.3));
+  _qq.setFromEuler(_e.set(ra[3],0,0)); Rt.arm.e.quaternion.copy(r.arms[1]).slerp(_qq,smooth(u/.3));
+  bal.position.copy(b); bal.quaternion.setFromUnitVectors(V3(0,1,0),taut?dir:V3(0,1,0).lerp(dir,.4).normalize());
+  setString(h,b,s.LS);
+  return w>.9;
+}
+
 function poseFalling(u){
   // he keeps tumbling backwards past horizontal until he is falling head-first, slowly twisting
   const target=-2.55, kd=Math.max(.5,rel.w0/(target-rel.tip0));
@@ -694,7 +894,8 @@ function smoothPose(dt){
   const parts=SMOOTH_PARTS();
   if(!smoothState||smoothState.parent!==fig.parent||dt<=0||dt>.25){smoothState={parent:fig.parent,q:parts.map(o=>o.quaternion.clone()),p:parts.map(o=>o.position.clone())};return;}
   const a=1-Math.exp(-dt/.045);
-  parts.forEach((o,i)=>{smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
+  parts.forEach((o,i)=>{if(i===0&&fig.parent===stage)return;   // floating: the root follows the umbrella exactly
+    smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
 }
 
 buildGrips();
@@ -709,7 +910,7 @@ const tauEnd=()=>(FLOOR-climbStart)/CLIMB_V;
 function tauOf(t){const t0=tauEnd()-CLIMB_P;if(t<=t0)return t;const u=Math.min(1,(t-t0)/(2*CLIMB_P));return t0+CLIMB_P*(1-(1-u)*(1-u));}
 const yLin=tau=>climbStart+CLIMB_V*tau;
 const climbY=t=>yLin(tauOf(t));
-const climbEnd=()=>tauEnd()+CLIMB_P+.35;
+const climbEnd=()=>tauEnd()+CLIMB_P+.05;
 // like the reference: left hand and left foot move up together, then the right pair half a cycle later.
 // each limb moves two rungs, so the hands always hold different rungs, leapfrogging each other
 const LIMBS={LH:{ph:0,off:150,max:HANDLE_TOP,x:-12,per:1,win:.42},LF:{ph:0,off:12,max:FLOOR,x:-9,per:1,win:.42},
@@ -722,39 +923,32 @@ function limbOnLadder(name,t){
   if(t>=e||prev===cur) return {y:t>=e?cur:prev,lift:0};
   const k=smoother((t-s)/(e-s));return {y:mix(prev,cur,k),lift:Math.sin(Math.PI*k)};}
 
-// after the climb: step back off the top rung, turn, walk to his spot, sit down cross-legged
-const SPOT=polar(24,.30,FLOOR);
+// after the climb: step back off the top rung, turn round and step up to the front bars, hands on them, facing you
 const entry=track([
   [0,   0,30, Math.PI,62,.10,-.04,-.2,0],
-  [.7,  0,26, Math.PI,72,.05, 0,  -.05,0],
-  [1.3, 2,34, Math.PI,73,.02, 0,   0,-.4],
-  [2.1, SPOT.x,28, .3,73.5,.05,0,-.05,0],
-  [2.6, SPOT.x,SPOT.z,.3,73.5,.05,0,-.05,0],
-  [3.25,SPOT.x,SPOT.z,.3,42,.45,0,.1,0],
-  [3.85,SPOT.x,SPOT.z,.3,15,.48,0,.12,0],
-  [4.5, SPOT.x,SPOT.z,.3,10,.08,0,.06,0]]);
-const T_ENTRY=4.5, T_OFF_LADDER=1.0;
+  [.45, 0,30, Math.PI-.25,71,.05,0,-.05,0],      // steps off the top rung and is already turning
+  [.95, 1,42, 1.8,73.5,.03, 0,  -.05,-.2],
+  [1.4, 0,56, .45,73.5,.03, 0,  -.05,0],
+  [1.75,0,64, 0, 73.5,.02,  0,  -.05,0]]);       // at the front bars, facing you
+const T_ENTRY=1.75, T_OFF_LADDER=.6;
 function entryBody(tb){const [x,z,yaw,hy,spX,tip,hdX,hdY]=entry(tb);return {root:V3(x,FLOOR,z),hy,yaw,spX,tip,hdX,hdY};}
-function entryFoot(tb,side){             // planted steps off the ladder and around, then crossing his legs
+function entryFoot(tb,side){             // planted steps off the ladder, round, and up to the bars
   const rungFoot=V3(-side*9,climbEndLimb(side>0?"LF":"RF").y,6), back=V3(-side*9,FLOOR,36);   // starts where the climb left each foot
   const under=(tt,f=2)=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),f*FIG_S);};
-  const steps=side<0?[[.05,.55,rungFoot,back,Math.PI,Math.PI],[1.3,1.75,back,under(1.9),Math.PI,1.6],[2.2,2.6,under(1.9),under(2.6),1.6,.3]]
-                    :[[.6,1.1,rungFoot,back,Math.PI,Math.PI],[1.7,2.15,back,under(2.3),Math.PI,1.0],[2.45,2.8,under(2.3),under(2.6),1.0,.3]];
+  const steps=side<0?[[0,.35,rungFoot,back,Math.PI,Math.PI-.3],[.6,.95,back,under(1.0),Math.PI-.3,1.5],[1.2,1.55,under(1.0),under(1.75),1.5,0]]
+                    :[[.3,.6,rungFoot,back,Math.PI,Math.PI-.3],[.85,1.2,back,under(1.25),Math.PI-.3,1.0],[1.4,1.75,under(1.25),under(1.75),1.0,0]];
   let p=rungFoot.clone(),yaw=Math.PI;
   for(const [a,b,p0,p1,y0,y1] of steps){if(tb<a)break;const k=smoother((tb-a)/(b-a));p=p0.clone().lerp(p1,k);p.y+=8*Math.sin(Math.PI*k);yaw=mix(y0,y1,k);}
-  // sitting down: feet slide from under him to crossed in front
-  const kk=smoother((tb-3.55)/.75);
-  if(kk>0){const b=entryBody(T_ENTRY);const cross=bodyPoint(b,-6.5*side,3,side>0?17:11);p=p.clone().lerp(cross,kk);p.y+=4*Math.sin(Math.PI*kk)*FIG_S;yaw=mix(yaw,b.yaw-1.15*side,kk);}
-  return {p,yaw,cross:kk};}
+  return {p,yaw,cross:0};}
 function entryHand(tb,arm,side){
   const handle=V3(-side*12,climbEndLimb(side>0?"LH":"RH").y,2);
   const relaxedAt=tt=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};
-  const leave=side<0?.75:1.0;
+  const leave=side<0?.3:.5;
   let p;
   if(tb<leave)p=handle;
-  else{const k=smoother((tb-leave)/.5);p=handle.clone().lerp(relaxedAt(tb),k);}
-  const kk=smoother((tb-3.4)/.8);
-  if(kk>0){(side>0?L:Rt).leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;p=p.clone().lerp(_kp,kk);}
+  else{const k=smoother((tb-leave)/.4);p=handle.clone().lerp(relaxedAt(tb),k);}
+  const kk=smoother((tb-1.2)/.5);                         // hands onto the bars
+  if(kk>0)p=p.clone().lerp(side>0?BAR_L:BAR_R,kk);
   return p;}
 
 function applyRig(spec){                 // shared: body, then legs and arms solved onto their targets
@@ -774,7 +968,7 @@ function applyRig(spec){                 // shared: body, then legs and arms sol
 }
 // while he is completely hidden inside the cloud the climb runs faster (nobody sees it), so he can
 // start deep in the cloud and still reach the cage in a reasonable time
-const HIDDEN_SPEED=4, MAX_CLIMB=21;
+const HIDDEN_SPEED=3, MAX_CLIMB=60;
 let warpT=null, warpI=null;           // real seconds -> intro seconds, built in layout()
 function warpIntro(ti){
   if(!warpT||ti<=0) return ti;
@@ -815,7 +1009,11 @@ function captureLadderFall(ti,clock){
 
 
 /* ---------- layout: map frame pixels to screen and world, then place the cloud under the cage ---------- */
-let W=1,H=1,unit=1,climbSet=false;
+let W=1,H=1,unit=1,climbSet=false,HTg=1,FLOAT=null;
+const _ray=new THREE.Vector3();
+function toStage(x,y,z){                       // a page point (px, from the top of the sky) at stage depth z -> stage units
+  _ray.set(x/W*2-1,1-y/HTg*2,.5).unproject(camera).sub(camera.position).normalize();
+  const zW=stage.position.z+z*unit; return stage.worldToLocal(camera.position.clone().addScaledVector(_ray,(zW-camera.position.z)/_ray.z));}
 // the ladder ends, and the climb starts, inside a part of the cloud that is in front, so he climbs out of it
 let frontCol=null;                         // front matte down the ladder's column, one value per 2 cut-out rows
 const ladderClip=new THREE.Plane(new THREE.Vector3(0,1,0),1e6); iron.clippingPlanes=[ladderClip]; renderer.localClippingEnabled=true;
@@ -833,13 +1031,19 @@ function layout(){
   unit=k*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
+  const upx=unit*H/Hw;                                                       // screen px per cage unit
+  camera.updateMatrixWorld(true); stage.updateMatrixWorld(true); HTg=HT;
+  BS.WIND=portrait?170:900;                                                 // a breeze carries him off to the right, below the menu
+  BAL.OFF.set(portrait?14:34,portrait?82:84,26);                             // just above the cage, beside the door
+  // where he floats under the umbrella: beside the cage, over the sunlit side of the cloud; and, scrolled to the bottom,
+  // down beside the about text (page px). Scrolling moves him from one to the other.
   if(!climbSet&&frontCol){
     const depth=(stage.position.y+Hw/2)/unit, nOf=d=>Math.ceil((FLOOR+d)/(2*RUNG));
-    const upx=unit*H/Hw, cs=cl.w/SKY.CW, ramp=.035*(H-cl.y);                // screen px per cage unit / per cut-out px
+    const cs=cl.w/SKY.CW, ramp=.035*(H-cl.y);                                 // screen px per cut-out px
     const hidden=y=>{const r=Math.round((y-cl.y)/cs/2); return r>=0&&r*2<590&&(y>H-ramp||frontCol[r]>.6);};   // inside the cloud, in front
     const covered=c=>{for(let u=c-30;u<=c+200;u+=5) if(!hidden(sy-u*upx)) return false; return true;};   // feet to head
     climbStart=FLOOR-2*RUNG*nOf(Math.min(1000,depth+40));                  // fallback: the old start
-    for(let n=nOf(Math.min(2000,depth+260));n>=6;n--) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // the deepest hidden start
+    for(let n=4;n<=nOf(Math.min(2000,depth+260));n++) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // he starts just inside the cloud: fewer rungs
     warpT=[0]; warpI=[0]; const dt=.02, tA=climbEnd();
     for(let t=0;t<tA;t+=dt){const sp=covered(climbY(t))?HIDDEN_SPEED:1; warpT.push(warpT[warpT.length-1]+dt/sp); warpI.push(t+dt);}
     const total=warpT[warpT.length-1], f=Math.min(1,MAX_CLIMB/total); if(f<1) warpT=warpT.map(t=>t*f);   // big screens: a brisker climb, at most MAX_CLIMB s
@@ -866,7 +1070,8 @@ function swayAt(t,clock){
   const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
   return {rx:rx+relTilt.x*d, rz:rz+relTilt.z*d};
 }
-let mode=reduce?"main":"intro", introStart=null, fallStart=null, pendingMain=false, introState=null;
+let seenClimb=false; try{seenClimb=localStorage.getItem("climbed")==="1";}catch(e){}   // returning visitors: he is already at the bars
+let mode=reduce||seenClimb?"main":"intro", introStart=null, fallStart=null, pendingMain=false, introState=null;
 function frame(now){
   const clock=now/1000;
   if(introStart===null)introStart=now;
@@ -875,10 +1080,10 @@ function frame(now){
     door.rotation.y=0;
     if(fig.parent!==cage)cage.add(fig);
     const s=swayAt(null,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
-    introState=poseIntro(ti,clock);
+    introState=poseIntro(ti,clock); tetheredBalloon(clock);
     shadow.visible=fig.position.y>FLOOR-3&&Math.hypot(fig.position.x,fig.position.z)>HATCH+4;
     shadow.position.x=fig.position.x; shadow.position.z=fig.position.z;
-    if(introState.seated){mode="main"; t0=pendingMain?now:null; pendingMain=false;}
+    if(introState.seated){mode="main"; t0=pendingMain?now:null; pendingMain=false; try{localStorage.setItem("climbed","1");}catch(e){}}
     return finishFrame(now);
   }
   if(mode==="ladderFall"){
@@ -891,20 +1096,24 @@ function frame(now){
   if(tt<T_RELEASE){
     if(released){cage.add(fig);released=false;}
     const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
-    const b=poseOnCage(tt,clock);
+    const b=poseOnCage(tt,clock); tetheredBalloon(clock);
     const r=Math.hypot(fig.position.x,fig.position.z);
     shadow.visible=r<R-6; shadow.position.x=fig.position.x; shadow.position.z=fig.position.z; shadow.rotation.z=-b.yaw;
   } else {
-    if(!released){captureRelease(clock); released=true;}
+    if(!released){captureRelease(clock); released=true; stageEl.classList.add("played");}
     const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
-    poseFalling(t-T_RELEASE); shadow.visible=false;
+    const settled=poseBalloon(t-T_RELEASE,clock); shadow.visible=false;
+    stageEl.classList.toggle("landed",settled);
   }
   finishFrame(now);
 }
 function finishFrame(now){
   const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
   if(!window.__manual) smoothPose(dt);
-  renderer.clear(); renderer.render(bgScene,bgCam); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
+  // the sky and cloud, the 3D scene, the cloud's nearer puffs; then, once he is out of the cage, him and the
+  // umbrella again on top (layer 1): he floats in front of the cloud, not inside it
+  renderer.clear(); renderer.render(bgScene,bgCam); camera.layers.set(0); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
+  if(released){renderer.clearDepth(); camera.layers.set(1); renderer.render(scene,camera); camera.layers.set(0);}
 }
 
 /* ---------- boot ---------- */
@@ -929,23 +1138,21 @@ Promise.all([ldr.loadAsync("assets/clouds.webp"),ldr.loadAsync("assets/clouds_fr
   window.__seek=(t,clock=10)=>{const now=clock*1000; mode="main"; t0=t===null?null:now-t*1000; frame(now);};
   window.__seekIntro=(ti,clock=10)=>{const now=clock*1000; mode="intro"; introStart=now-ti*1000; frame(now);};
   window.__ladderFall=(ti,u)=>{window.__seekIntro(ti); captureLadderFall(ti,10); mode="ladderFall"; fallStart=10000-u*1000; frame(10000);};
-  window.__dbg={camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
+  window.__dbg={leap:()=>({TL:T_LET,tc:rel&&rel.sim&&rel.sim.tc}),camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
   window.__ready=true;
 });
 {const ro=new ResizeObserver(()=>layout()); ro.observe(stageEl); ro.observe(skyEl);}
 
 document.getElementById("letgo").addEventListener("click",()=>{
-  stageEl.classList.add("played");
   const now=performance.now();
-  if(mode==="intro"){
-    if(introState&&introState.onLadder){captureLadderFall((now-introStart)/1000,now/1000); mode="ladderFall"; fallStart=now;}   // lets go of the ladder
-    else pendingMain=true;                                // already inside: sits down, then starts
-    return;}
-  const busy=mode==="main"&&t0!==null&&(now-t0)/1000<T_RELEASE+7;
-  if(busy)return;
-  if(mode==="ladderFall"||(mode==="main"&&t0!==null)){    // after a fall: start again from the climb
-    mode="intro"; introStart=now; cage.add(fig); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null; return;}
-  t0=reduce?now-30000:now; released=false; cage.add(fig); armCap=null; rel=null; smoothState=null;
+  stageEl.classList.add("waiting");                        // the button has been pressed; the text changes when he jumps
+  if(mode==="intro"){pendingMain=true; return;}          // still on his way up: he gets in, then goes straight for the door
+  if(mode==="main"&&t0!==null) return;
+  t0=reduce?now-30000:now; released=false; cage.add(fig); setOut(false); armCap=null; rel=null; smoothState=null;
+});
+document.getElementById("again").addEventListener("click",()=>{   // back to the start: the climb up through the cloud
+  const now=performance.now(); stageEl.classList.remove("played","landed","waiting");
+  mode=reduce?"main":"intro"; introStart=now; cage.add(fig); setOut(false); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null;
 });
 </script>
 
