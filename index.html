@@ -270,8 +270,11 @@ function skyLayout(W,H){             // H = height of the first screen
 }
 function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
   p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--fold",fold);}
-{const sky=document.getElementById("sky"), st=document.getElementById("stage"),
-  f=()=>placeCloudCSS(sky,skyLayout(st.clientWidth,st.clientHeight),st.clientHeight); f(); addEventListener("resize",f);}
+{const sky=document.getElementById("sky"), st=document.getElementById("stage"), work=document.getElementById("work"),
+  f=()=>{const H=st.clientHeight, L=skyLayout(st.clientWidth,H); placeCloudCSS(sky,L,H);
+    // the work section starts a little below the bottom of the cloud, whatever the screen
+    work.style.paddingTop=Math.max(64,Math.round(L.cloud.y+L.cloud.h*.93-H+56))+"px";};
+  f(); addEventListener("resize",f);}
 </script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
