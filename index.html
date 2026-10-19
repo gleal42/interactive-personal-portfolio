@@ -257,7 +257,7 @@ const SKY={PW:1280,PH:720,ANCHOR:{x:1007,y:148},   // ANCHOR: where the cage bas
   GAP:44};                           // frame px between the cage base and the peak
 function skyLayout(W,H){             // H = height of the first screen
   const portrait=W/H<=1, shortWide=!portrait&&H<560, cl=(v,a,b)=>Math.min(b,Math.max(a,v));
-  let k,sx,sy,w;
+  let k,sx,sy,w,m=1;
   if(portrait){
     const by=H*.38,bh=H*.62; k=Math.max(W/SKY.PW,bh/SKY.PH);
     const y0=by+bh-SKY.PH*k;
@@ -267,17 +267,19 @@ function skyLayout(W,H){             // H = height of the first screen
     // right edge, so they fill the middle instead of leaving an empty band between the words and the cloud.
     const a=W/H, g=cl(1+.42*(a-1.6),1,1.5);
     k=Math.max(H/SKY.PH*g,a<=2?W/SKY.PW:0);
+    m=cl(1.2+.6*(a-1.6),1.2,1.55);                      // the man, cage, ladder and balloon (and the cloud with them), scaled together
     sx=W*cl(.835-.07*a,.6,.76);
     const links=document.querySelector("nav .links");                       // the chain runs up past the menu: keep it left of the links
     if(links){const r=links.getBoundingClientRect(); if(r.width) sx=Math.min(sx,r.left-24);}
     const navB=shortWide?52:82;                       // the cage, chain ring and balloon stay below the menu
-    sy=Math.max(H*.365,navB+18+145*k);
-    w=Math.max(H*1.5*g,(W-sx)/.42);
+    m=Math.max(1,Math.min(m,(H*.55-navB-18)/(145*k)));   // short screens: keep the cage base above the middle, so the cloud still shows
+    sy=Math.max(H*.365,navB+18+145*k*m);
+    w=Math.max(H*1.5*g*m,(W-sx)/.42);
   }
   // the cloud's peak sits right under the cage; the cloud is big and may run off the right edge and below
   // the fold (scrolling reveals the rest of it)
   const s=w/SKY.CW;
-  return {portrait,shortWide,k,sx,sy,cloud:{x:sx-SKY.PEAK.x*s,y:sy+SKY.GAP*k-SKY.PEAK.y*s,w,h:SKY.CH*s}};
+  return {portrait,shortWide,k,m,sx,sy,cloud:{x:sx-SKY.PEAK.x*s,y:sy+SKY.GAP*k*m-SKY.PEAK.y*s,w,h:SKY.CH*s}};
 }
 function placeCloudCSS(el,L,fold){const c=L.cloud,p=(n,v)=>el.style.setProperty(n,v.toFixed(1)+"px");
   p("--cx",c.x); p("--cy",c.y); p("--cw",c.w); p("--fold",fold);}
@@ -1042,7 +1044,7 @@ function layout(){
   const full=2*HT-H, D=3000, Hw=2*D*Math.tan(THREE.MathUtils.degToRad(FOV/2));
   camera.fov=2*THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV/2))*full/H));
   camera.aspect=W/full; camera.setViewOffset(W,full,0,HT-H,W,HT); camera.position.set(0,0,D); camera.updateProjectionMatrix();
-  unit=k*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
+  unit=k*L.m*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
   stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
   stage.scale.setScalar(unit);
   const upx=unit*H/Hw;                                                       // screen px per cage unit
