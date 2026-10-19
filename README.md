@@ -32,7 +32,7 @@ thread), made by `tools/shirt_logo.py`; the man's shirt in the scene uses the sa
 - **The face** is projected from four photos (front, left, right, back) onto a head shaped to match them (`assets/face_*.jpg`).
 - **Motion**: hands and feet are placed on real points (knees, bars, door frame, rim) and the arms and legs are solved to reach them, so nothing slides. Every joint is lightly smoothed between frames.
 - **The fall** is simulated: he tips backwards around his heels under gravity, leaves the rim with that speed, then follows a ballistic arc while air resistance settles him face-up. The cage leans toward his weight and swings back when he's gone.
-- The layout adapts to phones: the quote sits above, and the cage is bigger and kept clear of the text.
+- The layout adapts to the screen: on phones the quote sits above and the cage is bigger; on wide screens (desktop, phones held sideways) the cage and cloud grow and move in toward the middle as the screen gets wider.
 
 ## Run locally
 
@@ -76,7 +76,7 @@ Most things are a single constant near the top of the script in `index.html`:
 | What | Constant |
 |---|---|
 | Cage size on wide screens / phones | `CAGE_SCALE_WIDE`, `CAGE_SCALE_TALL` |
-| Cage position | `SKY.ANCHOR` |
+| Cage position | `skyLayout()` (wide screens: moves in from the right and grows as the screen gets wider; stays left of the menu) |
 | The cloud's peak under the cage, the gap, its size | `SKY.PEAK`, `SKY.GAP`, `skyLayout()` |
 | Sky colours | `skyRow()` in the background shader |
 | Man's size | `FIG_S` |
