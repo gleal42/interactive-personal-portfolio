@@ -110,6 +110,8 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 .sec .inner.wide{max-width:64rem}
 .sec .lead{font-size:1.3rem;color:var(--cloud)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:8px}
+/* five cards: three on the first row, two sharing the second, so none sits alone */
+@media (min-width:860px){.cards.three-two{grid-template-columns:repeat(6,minmax(0,1fr))}.cards.three-two>.card{grid-column:span 2}.cards.three-two>.card:nth-child(n+4){grid-column:span 3}}
 .card{border:1px solid rgba(243,235,224,.2);border-radius:10px;padding:22px 22px 24px;background:rgba(18,40,48,.38);display:grid;gap:8px;align-content:start}
 .card h3{margin:0;font-size:1.35rem;font-weight:600;line-height:1.25}
 .sec .card p{font-size:1.05rem;line-height:1.55}
@@ -197,7 +199,7 @@ nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
         <p>For an automotive software company, I built and tested the component that controls the displays in cars, from requirements to automated end-to-end tests. It shipped on a near-weekly release cycle at 80% test coverage and runs in production vehicles.</p>
       </article>
       <article class="card">
-        <span class="tag">CI/CD · automation</span>
+        <span class="tag">CI/CD · testing</span>
         <h3>Catching version errors before they ship</h3>
         <p>An automated check that validates a component's version numbers before every integration. It saves time on each one and cuts avoidable back-and-forth with external suppliers.</p>
       </article>
@@ -208,7 +210,7 @@ nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
   <div class="inner wide">
     <h2>services</h2>
     <p class="lead">What I can build for you.</p>
-    <div class="cards">
+    <div class="cards three-two">
       <article class="card">
         <h3>Your product, from idea to launch</h3>
         <p>A web app or tool designed, built and shipped: a first version you can put in front of real users.</p>
@@ -216,6 +218,10 @@ nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
       <article class="card">
         <h3>Automation and AI agents</h3>
         <p>Software that takes repetitive work off your plate: agents, integrations and pipelines that run on their own.</p>
+      </article>
+      <article class="card">
+        <h3>Testing and quality</h3>
+        <p>Requirements written down and traced at every level, down to the tests that check them, and pipelines that catch errors before they ship. The discipline automotive software is held to, applied to yours.</p>
       </article>
       <article class="card">
         <h3>Tools for your team</h3>
