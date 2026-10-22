@@ -11,6 +11,7 @@ the cloud, comes in through a hatch in the floor and holds the front bars, facin
   carries him off on the breeze, out of the frame. *The door was never locked.*
 - Returning visitors skip the climb and find him already at the bars; **watch again** replays everything.
 - Below: work, services, about, and contact (where a small red balloon is waiting).
+- In English and European Portuguese (`/pt/`): the switch at the end of the menu remembers the choice, and gets a soft ring when the browser prefers the other language. Nothing redirects by country.
 
 The logo is a folded shirt in my own plaid (navy and green blocks, blue stripes, a cream windowpane and one red
 thread), made by `tools/shirt_logo.py`; the man's shirt in the scene uses the same plaid.
@@ -63,7 +64,11 @@ The site appears at `https://<username>.github.io/<repository>/`.
 ## Structure
 
 ```
-index.html           the homepage (HTML, CSS and the three.js scene in one file)
+index.html           the English homepage (text only)
+pt/index.html        the Portuguese homepage (same structure, its own text)
+site.css             the styles, shared by both
+sky.js               where the cage and cloud go on each screen, shared
+scene.js             the three.js scene and the jump, shared (loads assets relative to itself)
 assets/              the cut-out cloud, face textures, logo, favicons, contact balloon and share image (og.jpg)
 style-guide/         the visual style guide (palette, type, motifs, generator prompt)
 tools/               Python scripts: cut out the cloud (clouds.py), its front puffs (clouds_front.py), the shirt logo (shirt_logo.py), the face textures, the old plate clean-up
@@ -71,7 +76,7 @@ tools/               Python scripts: cut out the cloud (clouds.py), its front pu
 
 ## Tweaking
 
-Most things are a single constant near the top of the script in `index.html`:
+Most things are a single constant near the top of `scene.js` (or `skyLayout()` in `sky.js`):
 
 | What | Constant |
 |---|---|

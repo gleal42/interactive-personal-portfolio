@@ -1,0 +1,881 @@
+import * as THREE from "three";
+const ASSETS=new URL("assets/",import.meta.url).href;   // works from any page, e.g. /pt/
+
+/* ---------- constants (units = px of the 1280x720 layout frame, see SKY above) ---------- */
+const CAGE_SCALE_WIDE=.44, CAGE_SCALE_TALL=.85;   // smaller on wide screens, bigger on phones
+const PIVOT=3600;                    // chain pivot height above the cage base
+const R=84, STRAIGHT=150, DOME=74, NB=36, S=2*Math.PI/NB, MID=30;
+const DOOR=1.2;                      // door faces right, turned a little toward the camera
+const DOOR_TOP=147, FLOOR=8;   // the door opening reaches the top ring
+const FIG_S=1.12;               // the man, 12% bigger
+let T_RELEASE=0;   // set from the fall simulation below
+
+const canvas=document.getElementById("scene"), stageEl=document.getElementById("stage"), skyEl=document.getElementById("sky");
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.AgXToneMapping;
+renderer.toneMappingExposure=1.0;
+renderer.autoClear=false;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+/* ---------- background: painted sky + the cut-out cloud, and the cloud's nearer puffs in front ----------
+   The sky is the gradient of the original photo (sampled in tools/clouds.py), measured in photo rows:
+   darkest at the top, lighter toward the cloud, warm haze below it. Above the cloud the rows are
+   stretched so the darkest colour always reaches the top of the screen; below the fold the sky deepens
+   behind the about section. Grain is added on top.
+   After the 3D scene, the brighter, nearer puffs (assets/clouds_front.png) are drawn again on top of it,
+   so the ladder and the man pass behind them and come out again. Those pixels are the same as the ones
+   behind, so the only thing that changes is what is hidden. Below the fold the whole cloud is in front:
+   the ladder ends inside it and the man disappears into it. */
+const {CW,ROW0:CLOUD_ROW0}=SKY, CLOUD_TOP=SKY.PEAK.y;   // cloud placement lives in skyLayout(), in the script above
+const bgScene=new THREE.Scene(), fgScene=new THREE.Scene(), bgCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const bgUni={tex:{value:null},front:{value:null},rect:{value:new THREE.Vector4(0,0,1,1)},res:{value:new THREE.Vector2(1,1)},fold:{value:1}};
+const BG_COMMON=`uniform sampler2D tex,front;uniform vec4 rect;uniform vec2 res;uniform float fold;
+  float vig(vec2 p){vec2 q=vec2(p.x/res.x,min(p.y,fold)/fold)-.5; return 1.-.18*dot(q,q);}
+  float grain(){return (fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*.03;}`;
+const quad=(frag,extra={})=>new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+  uniforms:bgUni,depthTest:false,depthWrite:false,...extra,
+  vertexShader:"void main(){gl_Position=vec4(position.xy,0.,1.);}",fragmentShader:BG_COMMON+frag}));
+bgScene.add(quad(`
+  vec3 st(float y,float y0,float y1,vec3 a,vec3 b){return mix(a,b,clamp((y-y0)/(y1-y0),0.,1.));}
+  vec3 skyRow(float y){                       // colours of the photo's sky, row 0..1536
+    vec3 c=st(y,0.,400.,vec3(23,54,70),vec3(36,74,91));
+    if(y>400.) c=st(y,400.,${CLOUD_ROW0}.,vec3(36,74,91),vec3(54,98,116));
+    if(y>${CLOUD_ROW0}.) c=st(y,${CLOUD_ROW0}.,1050.,vec3(54,98,116),vec3(74,116,131));
+    if(y>1050.) c=st(y,1050.,1300.,vec3(74,116,131),vec3(96,124,131));
+    if(y>1300.) c=st(y,1300.,1420.,vec3(96,124,131),vec3(107,123,124));
+    if(y>1420.) c=st(y,1420.,1536.,vec3(107,123,124),vec3(120,118,108));
+    return c/255.;}
+  void main(){vec2 p=vec2(gl_FragCoord.x,res.y-gl_FragCoord.y);
+    float s=rect.z/${CW}., top=max(rect.y+${CLOUD_TOP}.*s,1.), row0=${CLOUD_ROW0+CLOUD_TOP}.;
+    float y=p.y<top? row0*p.y/top : row0+(p.y-top)/s;
+    vec3 c=skyRow(clamp(y,0.,1536.));
+    c*=.95+.09*smoothstep(0.,1.,p.x/res.x);                 // the sun side is a little brighter
+    c=mix(c,vec3(29,65,76)/255.,smoothstep(fold,res.y,p.y)*.9);   // deeper sky behind the about section
+    vec2 d=(p-(rect.xy+rect.zw*vec2(.45,.4)))/(rect.zw*vec2(.6,.7));
+    c+=vec3(.04,.04,.03)*exp(-dot(d,d));                     // soft light around the cloud
+    vec2 uv=(p-rect.xy)/rect.zw;
+    if(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.){vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y)); c=c*(1.-k.a)+k.rgb;}   // premultiplied
+    gl_FragColor=vec4(c*vig(p)+grain(),1.);}`));
+fgScene.add(quad(`
+  void main(){vec2 p=vec2(gl_FragCoord.x,res.y-gl_FragCoord.y), uv=(p-rect.xy)/rect.zw;
+    if(uv.x<=0.||uv.x>=1.||uv.y<=0.||uv.y>=1.) discard;
+    vec4 k=texture2D(tex,vec2(uv.x,1.-uv.y));
+    float m=max(texture2D(front,vec2(uv.x,1.-uv.y)).r, smoothstep(fold-.07*(fold-rect.y),fold,p.y));
+    gl_FragColor=vec4(k.rgb*vig(p)+grain()*k.a,k.a)*m;}`,
+  {transparent:true,blending:THREE.CustomBlending,blendSrc:THREE.OneFactor,blendDst:THREE.OneMinusSrcAlphaFactor,
+   blendSrcAlpha:THREE.OneFactor,blendDstAlpha:THREE.OneMinusSrcAlphaFactor}));
+
+/* ---------- procedural textures ---------- */
+function canvasTex(w,h,draw,repeat=[1,1],srgb=true){const c=document.createElement("canvas");c.width=w;c.height=h;draw(c.getContext("2d"),w,h);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;}
+function noise(g,w,h,amt,alpha=.12){const d=g.getImageData(0,0,w,h);for(let i=0;i<d.data.length;i+=4){const n=(Math.random()-.5)*amt;d.data[i]+=n;d.data[i+1]+=n;d.data[i+2]+=n;}g.putImageData(d,0,0);}
+// green flannel plaid, like his shirt
+// his shirt: the same plaid as the logo (tools/shirt_logo.py): navy and forest-green blocks, blue stripes,
+// a thin cream windowpane and one red thread; 2/2 twill, brushed
+const plaid=canvasTex(256,256,(g,w,h)=>{
+  const C={navy:[30,38,62],ink:[20,25,40],blue:[50,74,128],green:[48,74,52],cream:[214,216,200],red:[178,58,46]};
+  const seq=[["ink",16],["blue",3],["navy",1],["red",1],["navy",1],["blue",3],["ink",16],["green",24],["cream",2],["green",24]];
+  const st=[]; seq.forEach(([c,n])=>{for(let i=0;i<n;i++)st.push(C[c]);});
+  const P=st.length, d=g.createImageData(w,h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const a=st[Math.floor(x/w*P)],b=st[Math.floor(y/h*P)],t=((x>>1)+(y>>1))&1,k=(y*w+x)*4,n=1+(Math.random()-.5)*.1;
+    for(let c=0;c<3;c++)d.data[k+c]=(.5*(t?a[c]:b[c])+.25*(a[c]+b[c]))*n; d.data[k+3]=255;}
+  g.putImageData(d,0,0);
+},[3,2]);
+// worn blue denim
+const denim=canvasTex(256,256,(g,w,h)=>{
+  g.fillStyle="#242c3d";g.fillRect(0,0,w,h);
+  g.globalAlpha=.22;g.strokeStyle="#56637d";for(let i=-h;i<w;i+=2){g.beginPath();g.moveTo(i,0);g.lineTo(i+h*.5,h);g.stroke();}
+  g.globalAlpha=1; noise(g,w,h,34);
+  const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,"rgba(255,255,255,0)");gr.addColorStop(.5,"rgba(120,135,165,.14)");gr.addColorStop(1,"rgba(255,255,255,0)");g.fillStyle=gr;g.fillRect(0,0,w,h);
+},[2,2]);
+// soft folds and creases for the clothes
+const folds=canvasTex(256,256,(g,w,h)=>{g.fillStyle="#808080";g.fillRect(0,0,w,h);
+  for(let i=0;i<70;i++){const x=Math.random()*w,y=Math.random()*h,l=30+Math.random()*90,a=(Math.random()-.5)*1.2;
+    g.save();g.translate(x,y);g.rotate(a);const gr=g.createLinearGradient(0,-6,0,6);gr.addColorStop(0,"rgba(0,0,0,0)");gr.addColorStop(.5,Math.random()<.5?"rgba(0,0,0,.35)":"rgba(255,255,255,.3)");gr.addColorStop(1,"rgba(0,0,0,0)");
+    g.fillStyle=gr;g.fillRect(-l/2,-6,l,12);g.restore();}
+  noise(g,w,h,16);},[2,2],false);
+// tarnished bronze for the cage
+const tarnish=canvasTex(256,256,(g,w,h)=>{
+  g.fillStyle="#6f6c66";g.fillRect(0,0,w,h);
+  for(let i=0;i<220;i++){g.globalAlpha=Math.random()*.18;g.fillStyle=Math.random()<.5?"#2b2a27":"#8d877b";
+    const x=Math.random()*w,y=Math.random()*h;g.fillRect(x,y,2+Math.random()*6,10+Math.random()*60);}
+  g.globalAlpha=1; noise(g,w,h,30);
+},[1,6]);
+const tarnishRough=canvasTex(128,128,(g,w,h)=>{g.fillStyle="#7a7a7a";g.fillRect(0,0,w,h);noise(g,w,h,90);},[1,6],false);
+
+/* ---------- materials ---------- */
+const bronze=new THREE.MeshPhysicalMaterial({color:0x6e7477,metalness:.85,roughness:.62,roughnessMap:tarnishRough,envMapIntensity:.85,clearcoat:.2,clearcoatRoughness:.3});
+const brass=new THREE.MeshPhysicalMaterial({color:0xae8a58,map:tarnish,metalness:.9,roughness:.55,roughnessMap:tarnishRough,envMapIntensity:1.0,clearcoat:.5,clearcoatRoughness:.15});
+const bronzeDark=new THREE.MeshPhysicalMaterial({color:0x8a847a,map:tarnish,metalness:.92,roughness:.58,roughnessMap:tarnishRough,envMapIntensity:.85,clearcoat:.45,clearcoatRoughness:.15});
+const iron=new THREE.MeshStandardMaterial({color:0x56544f,metalness:.9,roughness:.42,envMapIntensity:1.1});
+const shirt=new THREE.MeshStandardMaterial({map:plaid,roughness:.95,metalness:0,bumpMap:folds,bumpScale:1.4});
+const jeans=new THREE.MeshStandardMaterial({map:denim,roughness:.92,metalness:0,bumpMap:folds,bumpScale:1.2});
+const neckM=new THREE.MeshStandardMaterial({color:0x9a6a55,roughness:.75});
+const skin=new THREE.MeshPhysicalMaterial({color:0xa9785f,roughness:.62,sheen:.35,sheenColor:new THREE.Color(0xffc0a0),envMapIntensity:.5});
+const hairM=new THREE.MeshStandardMaterial({color:0x2a1d16,roughness:.85});
+const beardM=new THREE.MeshStandardMaterial({color:0x3b2a20,roughness:.95,transparent:true,opacity:.85});
+const shoeM=new THREE.MeshStandardMaterial({color:0x37373a,roughness:.75,metalness:0,bumpMap:folds,bumpScale:.6});   // dark canvas sneakers
+const soleM=new THREE.MeshStandardMaterial({color:0xd6d1c6,roughness:.8});   // white rubber soles
+const beltM=new THREE.MeshStandardMaterial({color:0x3a2a1e,roughness:.55});
+
+/* ---------- 3D scene ---------- */
+const scene=new THREE.Scene();
+const FOV=18, camera=new THREE.PerspectiveCamera(FOV,1,1,20000);
+const stage=new THREE.Group(); scene.add(stage);      // scaled so 1 unit = 1 plate px
+const hang=new THREE.Group(); hang.position.y=PIVOT; stage.add(hang);
+const cage=new THREE.Group(); cage.position.y=-PIVOT; hang.add(cage);
+
+{const hl=new THREE.HemisphereLight(0x86aab6,0xe6c3a2,.9); hl.layers.enableAll(); scene.add(hl);}
+scene.fog=new THREE.Fog(0x6b8f99,0,3000/0.11);   // ~20% haze toward the sky colour, like the clouds
+const sun=new THREE.DirectionalLight(0xffe2c6,2.6); sun.layers.enableAll(); scene.add(sun); scene.add(sun.target);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004;
+const SUN_DIR=new THREE.Vector3(-0.75,1.05,1.15).normalize();
+const rim=new THREE.DirectionalLight(0xffd8b4,1.4); rim.layers.enableAll(); rim.position.set(1.1,.35,-1); scene.add(rim);   // warm back light off the clouds
+const bounce=new THREE.DirectionalLight(0xf0c8a6,.7); bounce.layers.enableAll(); bounce.position.set(.3,-1,.6); scene.add(bounce);   // light reflected up from the clouds below
+
+const add=(parent,m,cast=true,recv=true)=>{m.castShadow=cast;m.receiveShadow=recv;parent.add(m);return m;};
+const P=(a,y,r=R)=>new THREE.Vector3(r*Math.sin(a),y,r*Math.cos(a));
+const THICK=.62;   // thin bars and rings, like the reference
+function tube(points,rad,mat,seg){const c=new THREE.CatmullRomCurve3(points);const m=new THREE.Mesh(new THREE.TubeGeometry(c,seg||points.length*4,rad*THICK,14,false),mat);m.castShadow=true;m.receiveShadow=true;return m;}
+function arc(a0,a1,y,r=R,n=48){const pts=[];for(let i=0;i<=n;i++)pts.push(P(a0+(a1-a0)*i/n,y,r));return pts;}
+function ring(y,r,rad,mat){const m=new THREE.Mesh(new THREE.TorusGeometry(r,rad*THICK,14,128),mat);m.rotation.x=Math.PI/2;m.position.y=y;m.castShadow=m.receiveShadow=true;return m;}
+const BAR=2.1;
+// the chain can fade out above the cage (phones: so it doesn't run through the words above it)
+const CHAIN_FADE={value:new THREE.Vector2(1e5,2e5)};
+const chainM=bronze.clone(); chainM.transparent=true;
+chainM.onBeforeCompile=sh=>{sh.uniforms.chainFade=CHAIN_FADE;
+  sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying float vChainY;").replace("#include <begin_vertex>","#include <begin_vertex>\nvChainY=(instanceMatrix*vec4(transformed,1.)).y;");
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform vec2 chainFade;varying float vChainY;").replace("#include <dithering_fragment>","gl_FragColor.a*=1.-smoothstep(chainFade.x,chainFade.y,vChainY);\n#include <dithering_fragment>");};
+
+/* cage: base, bars, dome, rings */
+const HATCH=27;   // round opening in the floor where the ladder comes up
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+8,R+4,FLOOR+14,96,1,true),brass)).position.y=(FLOOR-14)/2;
+add(cage,new THREE.Mesh(new THREE.CylinderGeometry(R+4,R-6,6,96,1,true),brass)).position.y=-17;
+{const top=new THREE.Mesh(new THREE.RingGeometry(HATCH,R+8,96,1),brass);top.rotation.x=-Math.PI/2;top.position.y=FLOOR;add(cage,top);
+ const bot=new THREE.Mesh(new THREE.RingGeometry(HATCH,R-6,96,1),brass);bot.rotation.x=Math.PI/2;bot.position.y=-20;add(cage,bot);
+ const wallM=brass.clone();wallM.side=THREE.BackSide;
+ const wall=new THREE.Mesh(new THREE.CylinderGeometry(HATCH,HATCH,FLOOR+20,48,1,true),wallM);wall.position.y=(FLOOR-20)/2;add(cage,wall);}
+cage.add(ring(-14,R+5,3.4/THICK,brass)); cage.add(ring(-4,R+7,1.8/THICK,brass)); cage.add(ring(FLOOR,R+8,2.6/THICK,brass));
+const off=DOOR-1.5*S, doorIdx=[];
+for(let i=0;i<NB;i++){const a=off+i*S;const d=Math.atan2(Math.sin(a-DOOR),Math.cos(a-DOOR));
+  const inDoor=Math.abs(d)<2*S-1e-3; if(inDoor)doorIdx.push(a);
+  cage.add(tube([P(a,inDoor?DOOR_TOP:FLOOR),P(a,STRAIGHT)],BAR,bronze,2));
+  const dome=[];for(let k=0;k<=12;k++){const t=k/12*Math.PI/2;dome.push(P(a,STRAIGHT+DOME*Math.sin(t),R*Math.cos(t)));}
+  cage.add(tube(dome,BAR,bronze,24));}
+cage.add(ring(STRAIGHT,R,3.0,bronze));
+cage.add(ring(STRAIGHT+DOME*Math.sin(.75),R*Math.cos(.75),2.2,bronze));
+const hingeA=DOOR-2*S, freeA=DOOR+2*S;
+cage.add(tube(arc(freeA,hingeA+2*Math.PI,MID),2.6,bronze));
+cage.add(tube(arc(hingeA,freeA,DOOR_TOP+2),2.2,bronze));
+add(cage,new THREE.Mesh(new THREE.ConeGeometry(5,9,20),bronze)).position.y=STRAIGHT+DOME+3;
+add(cage,new THREE.Mesh(new THREE.TorusGeometry(14,1.6,12,48),bronze)).position.y=STRAIGHT+DOME+22;
+{const linkG=new THREE.TorusGeometry(3.2,.85,8,20);linkG.scale(1,1.6,1);
+ const y0=STRAIGHT+DOME+38, n=Math.ceil((PIVOT-y0)/8.6)+2;
+ const links=new THREE.InstancedMesh(linkG,chainM,n),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
+ for(let i=0;i<n;i++){e.set(0,i%2?Math.PI/2:0,0);q.setFromEuler(e);m.compose(new THREE.Vector3(0,y0+i*8.6,0),q,new THREE.Vector3(1,1,1));links.setMatrixAt(i,m);}
+ cage.add(links);}
+/* door on a hinge */
+const hingeP=P(hingeA,0);
+const door=new THREE.Group(); door.position.copy(hingeP); cage.add(door);
+for(const a of doorIdx){const p=P(a,0).sub(hingeP);door.add(tube([new THREE.Vector3(p.x,FLOOR+2,p.z),new THREE.Vector3(p.x,DOOR_TOP,p.z)],BAR,bronze,2));}
+for(const y of [FLOOR+3,MID,DOOR_TOP-2]) door.add(tube(arc(hingeA,freeA,y).map(v=>v.sub(hingeP)),y===MID?2.6:2.2,bronze));
+const openSign=(()=>{const t=new THREE.Vector3().subVectors(P(freeA,0),hingeP);const r=v=>Math.hypot(v.x+hingeP.x,v.z+hingeP.z);
+  return r(t.clone().applyAxisAngle(new THREE.Vector3(0,1,0),.2))>r(t)?1:-1;})();
+/* ladder: thin dark iron, like the original */
+{const len=4200, topY=FLOOR+60;
+ for(const x of[-17,17]){const rail=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.1,len+topY,8),iron);rail.position.set(x,(topY-len)/2,0);rail.castShadow=true;cage.add(rail);
+   const cap=new THREE.Mesh(new THREE.SphereGeometry(2.6,12,8),iron);cap.position.set(x,topY,0);cage.add(cap);}
+ const n=Math.floor(len/26)+3,rung=new THREE.CylinderGeometry(1.6,1.6,34,6);rung.rotateZ(Math.PI/2);
+ const im=new THREE.InstancedMesh(rung,iron,n),m=new THREE.Matrix4();
+ for(let i=0;i<n;i++){m.makeTranslation(0,FLOOR+52-i*26,0);im.setMatrixAt(i,m);}cage.add(im);}
+/* merge the many static pieces into one mesh per material: far fewer draw calls, smoother frames */
+function mergeGeos(geos){let nV=0,nI=0;for(const g of geos){if(!g.index)g.setIndex([...Array(g.attributes.position.count).keys()]);nV+=g.attributes.position.count;nI+=g.index.count;}
+  const pos=new Float32Array(nV*3),nor=new Float32Array(nV*3),uv=new Float32Array(nV*2),idx=new Uint32Array(nI);let vo=0,io=0;
+  for(const g of geos){pos.set(g.attributes.position.array,vo*3);nor.set(g.attributes.normal.array,vo*3);if(g.attributes.uv)uv.set(g.attributes.uv.array,vo*2);
+    const ia=g.index.array;for(let i=0;i<ia.length;i++)idx[io+i]=ia[i]+vo;vo+=g.attributes.position.count;io+=ia.length;}
+  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));out.setAttribute("normal",new THREE.BufferAttribute(nor,3));
+  out.setAttribute("uv",new THREE.BufferAttribute(uv,2));out.setIndex(new THREE.BufferAttribute(idx,1));return out;}
+function mergeStatic(group){const byMat=new Map();
+  for(const c of [...group.children]){if(c.isMesh&&!c.isInstancedMesh&&c.children.length===0){c.updateMatrix();const g=c.geometry.clone();g.applyMatrix4(c.matrix);
+    if(!byMat.has(c.material))byMat.set(c.material,[]);byMat.get(c.material).push(g);group.remove(c);}}
+  for(const [mat,geos] of byMat){const m=new THREE.Mesh(mergeGeos(geos),mat);m.castShadow=m.receiveShadow=true;group.add(m);}}
+mergeStatic(cage); mergeStatic(door);
+/* soft contact shadow under his feet */
+const shadowTex=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");const gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,"rgba(0,0,0,.4)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const shadow=new THREE.Mesh(new THREE.PlaneGeometry(36,24),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));
+shadow.rotation.x=-Math.PI/2; shadow.position.y=FLOOR+.25; cage.add(shadow);
+
+/* ---------- the man: green plaid shirt, jeans, dark boots, short dark hair and beard ---------- */
+const THIGH=36, SHIN=35, ANKLE=4;
+function limb(L,r,mat,taper=1){const g=new THREE.CapsuleGeometry(r,Math.max(.1,L-r*.5),8,16);
+  if(taper!==1){const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);const k=1+(taper-1)*((-y/(L))+.5);p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k);}g.computeVertexNormals();}
+  const m=new THREE.Mesh(g,mat);m.position.y=-L/2;m.castShadow=m.receiveShadow=true;return m;}
+function ball(r,mat,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),mat);m.scale.set(sx,sy,sz);m.castShadow=m.receiveShadow=true;return m;}
+function lathe(pts,sz,mat){const g=new THREE.LatheGeometry(pts.map(([x,y])=>new THREE.Vector2(x,y)),40);g.scale(1,1,sz);const m=new THREE.Mesh(g,mat);m.castShadow=m.receiveShadow=true;return m;}
+const fig=new THREE.Group();
+const hips=new THREE.Group(); hips.position.y=THIGH+SHIN+ANKLE; fig.add(hips);
+hips.add(lathe([[0,-7],[9.5,-6.5],[13.6,-2],[14.4,4],[14,10],[0,10]],.74,jeans));
+{const b=lathe([[14.9,8.4],[15.1,10.6]],.74,beltM);hips.add(b);}
+const spine=new THREE.Group(); spine.position.y=10; hips.add(spine);
+{const t=lathe([[0,-9],[16.2,-9],[16.6,-2],[15.8,4],[16.2,14],[17.8,26],[18.2,32],[16.6,36.5],[12.5,41],[7.6,44],[0,44.5]],.66,shirt);t.scale.x=1.04;spine.add(t);}   // untucked shirt
+{const c=new THREE.Mesh(new THREE.TorusGeometry(6.2,1.7,8,28),shirt);c.rotation.x=Math.PI/2+.3;c.position.set(0,44.2,.6);c.scale.z=.85;spine.add(c);
+ for(const sx of[-1,1]){const fl=new THREE.Mesh(new THREE.BoxGeometry(5,.8,4.5),shirt);fl.position.set(3.4*sx,43.4,4.6);fl.rotation.set(-.9,.5*sx,.35*sx);spine.add(fl);}}   // collar
+const neck=new THREE.Group(); neck.position.y=43; spine.add(neck);
+{const n=new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.9,7,20),neckM);n.position.set(0,2.6,-.2);n.castShadow=true;neck.add(n);}
+const head=new THREE.Group(); head.position.y=3.6; neck.add(head);
+{ /* Gonçalo's head: shape fitted to his front and side outlines, skin and hair projected from his four photos */
+ const lerpTab=(tab,y)=>{if(y>=tab[0][0])return tab[0][1];for(let i=1;i<tab.length;i++){if(y>=tab[i][0]){const [y0,a]=tab[i-1],[y1,b]=tab[i];return b+(a-b)*(y-y1)/(y0-y1);}}return tab[tab.length-1][1];};
+ const WT=[[10.3,.3],[9.6,3.2],[8.7,4.5],[7.1,5.5],[4.1,6.2],[1.06,5.9],[-2,5.3],[-5,5.1],[-8.05,4.0],[-9.9,2.6],[-10.6,.9],[-10.9,.2]];
+ const ZF=[[10.3,-.6],[9.6,4.5],[8.4,7.4],[6.1,8.4],[3.9,8.6],[1.7,8.4],[0,7.4],[-1.7,7.5],[-3.9,8.4],[-6.1,8.2],[-8.4,8.1],[-9.8,7.3],[-10.6,5.2],[-10.9,3]];
+ const ZB=[[10.3,1.6],[9.6,4.5],[8.4,6.65],[6.1,8.1],[3.9,8.55],[1.7,8.55],[0,8.3],[-1.7,8.0],[-3.9,7.6],[-6.1,6.8],[-8.4,4.5],[-9.8,2.5],[-10.6,1.0],[-10.9,.4]];
+ const NOSE=[[.6,0],[-.5,.9],[-1.5,1.7],[-2.5,2.5],[-3.0,2.75],[-3.5,1.5],[-3.95,0]];
+ const g=(v,s)=>Math.exp(-(v*v)/(2*s*s));
+ const se=(c,e)=>Math.sign(c)*Math.pow(Math.abs(c),e);
+ const RY=96, RA=112, Y0=10.3, Y1=-10.9;
+ const verts=[], idx=[];
+ for(let j=0;j<=RY;j++){const y=Y0+(Y1-Y0)*j/RY, W=lerpTab(WT,y), zf=lerpTab(ZF,y), zb=lerpTab(ZB,y), nose=lerpTab(NOSE,y);
+   for(let i=0;i<=RA;i++){const a=i/RA*Math.PI*2, s=Math.sin(a), c=Math.cos(a);
+     const fr=c>0, ex=fr?2/2.7:2/2.3;
+     let x=W*se(s,ex), z=(fr?zf:-zb)*Math.pow(Math.abs(c),fr?2/2.7:2/2.3);
+     if(fr){z+=nose*g(x,.75+.35*Math.min(1,Math.max(0,-y/3)));
+       z-=.55*(g(x-1.75,.75)+g(x+1.75,.75))*g(y-.05,.55)*c;        // eye sockets
+       z+=.25*(g(x-1.8,.9)+g(x+1.8,.9))*g(y-1.1,.35)*c;}           // brow
+     verts.push(x,y,z);}}
+ for(let j=0;j<RY;j++)for(let i=0;i<RA;i++){const a=j*(RA+1)+i,b=a+RA+1;idx.push(a,b,a+1,b,b+1,a+1);}
+ const hg=new THREE.BufferGeometry(); hg.setAttribute("position",new THREE.Float32BufferAttribute(verts,3)); hg.setIndex(idx); hg.computeVertexNormals();
+ // ears: flattened ellipsoids that stick out, like his
+ const earG=new THREE.SphereGeometry(1,24,18);
+ // projection of the four photos
+ const V={front:{x0:450,y0:500,w:620,h:840},left:{x0:420,y0:420,w:1020,h:1100},right:{x0:440,y0:560,w:1000,h:1060},back:{x0:380,y0:380,w:800,h:980}};
+ const uvOf=(k,px,py)=>[(px-V[k].x0)/V[k].w,1-(py-V[k].y0)/V[k].h];
+ function project(geo,mat4){
+   const p=geo.attributes.position,n=geo.attributes.normal,N=p.count,v=new THREE.Vector3(),nn=new THREE.Vector3(),nm=new THREE.Matrix3().getNormalMatrix(mat4);
+   const F=new Float32Array(N*2),Lf=new Float32Array(N*2),Rf=new Float32Array(N*2),B=new Float32Array(N*2),Wt=new Float32Array(N*4);
+   for(let i=0;i<N;i++){v.fromBufferAttribute(p,i).applyMatrix4(mat4); nn.fromBufferAttribute(n,i).applyMatrix3(nm).normalize();
+     const {x,y,z}=v;
+     [F[i*2],F[i*2+1]]=uvOf("front",757+x*32.9,935-y*32.9);
+     [Lf[i*2],Lf[i*2+1]]=uvOf("left",952-z*44.8,975-y*44.8);
+     [Rf[i*2],Rf[i*2+1]]=uvOf("right",872+z*41.7,1095-y*41.7);
+     [B[i*2],B[i*2+1]]=uvOf("back",782-x*59.4,981-y*52);
+     let wf=Math.pow(Math.max(0,nn.z),3), wl=Math.pow(Math.max(0,nn.x),3), wr=Math.pow(Math.max(0,-nn.x),3), wb=Math.pow(Math.max(0,-nn.z),3);
+     if(nn.y>.5){const t=(nn.y-.5)*2; wl+=.3*t; wr+=.3*t; wb+=.25*t; wf+=.1*t;}
+     const sum=wf+wl+wr+wb+1e-5; Wt.set([wf/sum,wl/sum,wr/sum,wb/sum],i*4);}
+   geo.setAttribute("uvF",new THREE.BufferAttribute(F,2)); geo.setAttribute("uvL",new THREE.BufferAttribute(Lf,2));
+   geo.setAttribute("uvR",new THREE.BufferAttribute(Rf,2)); geo.setAttribute("uvB",new THREE.BufferAttribute(B,2));
+   geo.setAttribute("pw",new THREE.BufferAttribute(Wt,4));}
+ const tl=new THREE.TextureLoader(), T={};
+ for(const k of ["front","left","right","back"]){T[k]=tl.load(`${ASSETS}face_${k}.jpg`);T[k].colorSpace=THREE.NoColorSpace;T[k].anisotropy=4;}
+ const faceM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.72,metalness:0,envMapIntensity:.35});
+ faceM.onBeforeCompile=sh=>{
+   Object.assign(sh.uniforms,{texF:{value:T.front},texL:{value:T.left},texR:{value:T.right},texB:{value:T.back}});
+   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nattribute vec2 uvF,uvL,uvR,uvB;attribute vec4 pw;varying vec2 vF,vL,vR,vB;varying vec4 vW;")
+     .replace("#include <begin_vertex>","#include <begin_vertex>\nvF=uvF;vL=uvL;vR=uvR;vB=uvB;vW=pw;");
+   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D texF,texL,texR,texB;varying vec2 vF,vL,vR,vB;varying vec4 vW;")
+     .replace("#include <map_fragment>",`vec3 pc=texture2D(texF,vF).rgb*vW.x+texture2D(texL,vL).rgb*vW.y+texture2D(texR,vR).rgb*vW.z+texture2D(texB,vB).rgb*vW.w;
+       diffuseColor.rgb*=pow(pc,vec3(2.2))*1.35;`);
+ };
+ const hm=new THREE.Mesh(hg,faceM); hm.position.set(0,10.4,1.1); hm.castShadow=hm.receiveShadow=true; head.add(hm);
+ project(hg,new THREE.Matrix4());
+ for(const sx of[-1,1]){
+   const eg=earG.clone(); const m=new THREE.Matrix4().compose(new THREE.Vector3(5.45*sx,-1.9,-1.7),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,.42*sx,0)),new THREE.Vector3(.75,2.75,1.6));
+   eg.applyMatrix4(m); eg.computeVertexNormals(); project(eg,new THREE.Matrix4());
+   const e=new THREE.Mesh(eg,faceM); e.position.copy(hm.position); e.castShadow=true; head.add(e);}
+}
+
+function arm(side){const s=new THREE.Group();s.position.set(16.2*side,36.2,0);spine.add(s);s.add(ball(4.9,shirt,1,.85,1));s.add(limb(26,5.4,shirt,.86));
+  const e=new THREE.Group();e.position.y=-26;s.add(e);e.add(ball(4.6,shirt));e.add(limb(23,4.6,shirt,.84));
+  {const cuff=new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.6,2.4,16),shirt);cuff.position.y=-22;e.add(cuff);}
+  const w=new THREE.Group();w.position.y=-23.5;e.add(w);
+  const h=ball(3.2,skin,.78,1.45,1.1);h.position.y=-4.4;w.add(h);
+  const th=ball(1.45,skin,1,1.9,1);th.position.set(-2*side,-3.2,2);th.rotation.z=.4*side;w.add(th);
+  return {s,e,w};}
+function leg(side){const h=new THREE.Group();h.position.set(8*side,0,0);hips.add(h);h.add(limb(THIGH,8.0,jeans,.82));
+  const k=new THREE.Group();k.position.y=-THIGH;h.add(k);k.add(ball(6.2,jeans));k.add(limb(SHIN,6.2,jeans,1.0));
+  const a=new THREE.Group();a.position.y=-SHIN;k.add(a);
+  const f=new THREE.Mesh(new THREE.CapsuleGeometry(3.8,11,6,14),shoeM);f.rotation.x=Math.PI/2;f.scale.set(1.05,1,.85);f.position.set(0,-2.2,4.6);f.castShadow=true;a.add(f);
+  const sole=new THREE.Mesh(new THREE.CapsuleGeometry(3.9,11.6,4,12),soleM);sole.rotation.x=Math.PI/2;sole.scale.set(1.04,1,.35);sole.position.set(0,-4.7,4.6);a.add(sole);
+  return {h,k,a};}
+const L={arm:arm(1),leg:leg(1)}, Rt={arm:arm(-1),leg:leg(-1)};
+cage.add(fig); fig.scale.setScalar(FIG_S); shadow.scale.setScalar(FIG_S);
+
+/* ---------- motion helpers ---------- */
+const clamp01=x=>Math.min(1,Math.max(0,x));
+const ease=x=>{x=clamp01(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+const easeOut=x=>{x=clamp01(x);return 1-Math.pow(1-x,3);};
+const smooth=x=>{x=clamp01(x);return x*x*(3-2*x);};
+const smoother=x=>{x=clamp01(x);return x*x*x*(x*(6*x-15)+10);};
+const seg=(t,a,b)=>ease((t-a)/(b-a));
+const mix=(a,b,k)=>a+(b-a)*k;
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const polar=(r,a,y=0)=>V3(r*Math.sin(a),y,r*Math.cos(a));
+const leftOf=y=>V3(Math.cos(y),0,-Math.sin(y)), fwdOf=y=>V3(Math.sin(y),0,Math.cos(y));
+
+/* smooth curve through keyframes (monotone Hermite, so values never overshoot between poses) */
+function track(keys){
+  const n=keys.length, m=keys[0].length;
+  const tan=keys.map((k,i)=>{const out=[];for(let j=1;j<m;j++){
+    if(i===0||i===n-1){out.push(0);continue;}
+    const d0=(k[j]-keys[i-1][j])/(k[0]-keys[i-1][0]), d1=(keys[i+1][j]-k[j])/(keys[i+1][0]-k[0]);
+    out.push(d0*d1<=0?0:2/(1/d0+1/d1));}return out;});
+  return t=>{if(t<=keys[0][0])return keys[0].slice(1); if(t>=keys[n-1][0])return keys[n-1].slice(1);
+    let i=0; while(t>keys[i+1][0])i++;
+    const k1=keys[i],k2=keys[i+1], dt=k2[0]-k1[0], u=(t-k1[0])/dt, u2=u*u,u3=u2*u;
+    const out=[];for(let j=1;j<m;j++)out.push((2*u3-3*u2+1)*k1[j]+(u3-2*u2+u)*tan[i][j-1]*dt+(-2*u3+3*u2)*k2[j]+(u3-u2)*tan[i+1][j-1]*dt);
+    return out;};
+}
+
+/* ---------- choreography (seconds after "let go"); positions are in the cage's own space ---------- */
+const DC=DOOR, OUT=DC+Math.PI;
+// body: [t, root r, root angle, hips height, facing, spine bend, lean back, head nod, head turn]
+const body=track([
+  [-1,  64,0,  73.5,0,   .02, 0,  -.05,0],     // standing at the front bars, hands on them, facing you
+  [0,   64,0,  73.5,0,   .02, 0,  -.05,0],
+  [.45, 62,.05,73.5,.25, .03, 0,  -.08,.55],   // lets go and looks toward the door
+  [1.0, 48,.25,73.5,.35, .05, 0,  -.05,.4],    // turns and steps toward it
+  [1.35,42,.40,73.5,.45, .05, 0,  -.05,.55],
+  [1.75,42,.50,73,.55, .06,  0,  -.05,.6],     // leans in and pushes the door open
+  [2.25,34,.90,66,1.0, .15,  0,   0,.2],       // steps toward the doorway
+  [2.7, 36,1.18,48,1.20,.50, 0,   .28,0],      // crouches low before reaching the door
+  [3.2, 58,1.20,46,1.20,.55, 0,   .30,0],      // duck-walks under the top of the door
+  [3.75,74,1.20,46,1.20,.50, 0,   .05,0],      // crouched in the doorway
+  [4.15,75,1.20,48,1.20,.42, 0,  -.25,0],      // lifts his head and looks out at the sky
+  [4.45,75,1.22,52,1.24,.30, 0,  -.45,.35],    // looks up at the balloon tied beside the door
+  [4.85,75,1.20,52,1.20,.30, 0,  -.3,.2],      // unties it, the string in his hand
+  [5.2, 74,1.20,45,1.20,.52,.04,  .02,0],      // sinks lower, winding up
+  [5.45,78,1.20,52,1.20,.38,.10, -.08,0]]);    // springs out
+const T_STAND=0, T_LET=5.45;
+T_RELEASE=T_LET;
+
+function bodyAt(t){
+  if(t>T_LET)return bodyAt(T_LET);
+  const [r,a,hy,yaw,spX,tip,hdX,hdY]=body(t);return {root:polar(r,a,FLOOR),hy,yaw,spX,tip,hdX,hdY};}
+function footFromBody(t,side,fwd){const b=bodyAt(t);return {p:b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),fwd*FIG_S),yaw:b.yaw};}
+
+/* feet: crossed while sitting, then planted footsteps */
+function bodyPoint(b,x,y,z){return b.root.clone().addScaledVector(leftOf(b.yaw),x*FIG_S).addScaledVector(fwdOf(b.yaw),z*FIG_S).setY(FLOOR+y*FIG_S);}
+function sittingFoot(t,side){            // ankles crossed in front, sliding back under him as he gets up
+  const b=bodyAt(Math.max(0,Math.min(t,T_STAND)));
+  const kk=smoother((t-.65)/.75);
+  const cross=bodyPoint(b,-6.5*side,3,side>0?17:11), under=bodyPoint(b,8.5*side,0,2);
+  const p=cross.lerp(under,kk); p.y+=4*Math.sin(Math.PI*kk)*FIG_S;
+  return {p,yaw:mix(b.yaw-1.15*side,b.yaw,kk),cross:1-kk};}
+const STEPS={
+  L:[{t:-1,...footFromBody(0,1,2)},{a:.45,t:.9,...footFromBody(1.35,1,2)},{a:1.8,t:2.2,...footFromBody(2.3,1,4)},{a:2.7,t:3.1,...footFromBody(3.25,1,6)},
+     {a:3.35,t:3.75,...footFromBody(3.75,1,3)}],
+  R:[{t:-1,...footFromBody(0,-1,2)},{a:.7,t:1.15,...footFromBody(1.35,-1,2)},{a:2.2,t:2.65,...footFromBody(2.75,-1,4)},{a:3.1,t:3.55,...footFromBody(3.75,-1,3)}]};
+function footAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
+  const cur=list[i],nx=list[i+1];
+  if(!nx||t<nx.a)return {p:cur.p.clone(),yaw:cur.yaw};
+  const k=smoother((t-nx.a)/(nx.t-nx.a));
+  if(k>=1)return {p:nx.p.clone(),yaw:nx.yaw};
+  const p=cur.p.clone().lerp(nx.p,k); p.y+=8*Math.sin(Math.PI*k);
+  return {p,yaw:mix(cur.yaw,nx.yaw,k)};}
+
+/* hands: on his knees while sitting, then the door, the door frame and the bars */
+const nearestBar=a=>off+Math.round((a-off)/S)*S;
+const DOOR_BAR=DOOR-.5*S;
+const BAR_L=polar(R,off-4*S,FLOOR+118), BAR_R=polar(R,off-7*S,FLOOR+118);   // two front bars at chest height, about shoulder width apart
+function doorAngleAt(t){if(t===null||t<1.55)return 0;const u=t-1.55;return 1.7*smoother(u/1.0)+.04*Math.exp(-2*Math.max(0,u-1))*Math.sin(Math.max(0,u-1)*7);}
+function doorBarAt(t,y){const a=openSign*doorAngleAt(t);return polar(R,DOOR_BAR,y).sub(hingeP).applyAxisAngle(V3(0,1,0),a).add(hingeP);}
+const _kp=new THREE.Vector3();
+function kneeHand(leg){return ()=>{leg.k.getWorldPosition(_kp);cage.worldToLocal(_kp);_kp.y+=5*FIG_S;return _kp.clone();};}
+function relaxedHand(side){return t=>{const b=bodyAt(Math.max(0,t));return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};}
+let GRIP=null;
+function buildGrips(){GRIP={
+  L:[{t:-1,p:()=>BAR_L},                                // holding the front bars
+     {a:.3,t:.75,p:relaxedHand(1)},
+     {a:1.25,t:1.55,p:t=>doorBarAt(t,112)},             // pushes the door open
+     {a:1.95,t:2.35,p:relaxedHand(1)},
+     {a:2.75,t:3.1,p:()=>polar(R,DOOR+.6*S,DOOR_TOP+2)}, // grabs the top of the door
+     {a:4.2,t:4.55,p:t=>BAL_HOOK.clone().add(V3(1.5*Math.sin(t*23),2.4*Math.sin(t*29),0).multiplyScalar(clamp01((t-4.55)/.1)*clamp01((4.95-t)/.1)))},   // then the balloon's knot on the ring: he unties it
+     {a:T_LET,t:1e9,p:null}],
+  R:[{t:-1,p:()=>BAR_R},
+     {a:.35,t:.8,p:relaxedHand(-1)},
+     {a:2.75,t:3.15,p:()=>polar(R,hingeA,96)},           // the hinge side of the frame
+     {a:T_LET,t:1e9,p:null}]};}
+function handAt(list,t){let i=0;while(i+1<list.length&&t>=list[i+1].a)i++;
+  const cur=list[i],nx=list[i+1];
+  const at=(g,tt)=>g.p?g.p(tt):null;
+  if(!nx||t<nx.a)return at(cur,t);
+  if(!nx.p)return null;
+  const k=smoother((t-nx.a)/(nx.t-nx.a)), p0=at(cur,nx.a), p1=at(nx,t);
+  if(k>=1)return p1;
+  const p=p0.clone().lerp(p1,k); p.y+=6*Math.sin(Math.PI*k);
+  const r=Math.hypot(p.x,p.z), rr=r-5*Math.sin(Math.PI*k); p.x*=rr/r; p.z*=rr/r;
+  return p;}
+
+/* ---------- two-bone limb solver: puts a hand or foot exactly on its target ---------- */
+const _t=new THREE.Vector3(),_p=new THREE.Vector3(),_u=new THREE.Vector3(),_w=new THREE.Vector3(),_x=new THREE.Vector3(),_y=new THREE.Vector3(),_z=new THREE.Vector3(),_m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_qp=new THREE.Quaternion();
+const clampm1=x=>Math.min(1,Math.max(-1,x));
+function solveLimb(upper,lower,L1,L2,targetW,poleW,bend){
+  const par=upper.parent; par.updateMatrixWorld(true);
+  _t.copy(targetW); par.worldToLocal(_t); _t.sub(upper.position);
+  _p.copy(poleW); par.worldToLocal(_p); _p.sub(upper.position);
+  let d=_t.length(); d=Math.min(Math.max(d,Math.abs(L1-L2)+.01),L1+L2-.01);
+  const td=_t.normalize();
+  const ca=clampm1((L1*L1+d*d-L2*L2)/(2*L1*d)), sa=Math.sqrt(1-ca*ca);
+  const b=_p.clone().addScaledVector(td,-_p.dot(td)); if(b.lengthSq()<1e-6)b.set(0,-1,0); b.normalize();
+  _u.copy(td).multiplyScalar(ca).addScaledVector(b,sa);
+  _w.copy(td).multiplyScalar(d).addScaledVector(_u,-L1).normalize();
+  _y.copy(_u).negate();
+  _z.copy(_w).addScaledVector(_u,-_w.dot(_u)); if(_z.lengthSq()<1e-8)_z.copy(b); _z.normalize(); if(bend>0)_z.negate();
+  _x.crossVectors(_y,_z).normalize(); _z.crossVectors(_x,_y);
+  _m.makeBasis(_x,_y,_z); upper.quaternion.setFromRotationMatrix(_m);
+  const ci=clampm1((L1*L1+L2*L2-d*d)/(2*L1*L2)); lower.quaternion.setFromEuler(new THREE.Euler(bend*(Math.PI-Math.acos(ci)),0,0));
+}
+const ARM1=26, ARM2=27.7, LEG1=THIGH, LEG2=SHIN, ANKLE_H=5.3;
+function setFlatFoot(leg,yaw,pitch=0){
+  leg.a.parent.updateMatrixWorld(true);
+  cage.getWorldQuaternion(_q); _q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),yaw)); if(pitch)_q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),pitch));
+  leg.a.parent.getWorldQuaternion(_qp); leg.a.quaternion.copy(_qp.invert().multiply(_q));}
+
+/* arms after he lets go: open and reach toward the sky as he tips back */
+const ARMS_FALL={l:[-1.5,.42,-.25],r:[-1.42,-.4,-.32]};
+const _e=new THREE.Euler(), _qq=new THREE.Quaternion();
+let armCap=null;
+function armsFree(u,on){
+  const a1=Math.sin(u*1.7),a2=Math.sin(u*1.7+2.1);
+  const fk=[[ARMS_FALL.l[0]+.18*a1*on,0,ARMS_FALL.l[1]+.07*a2*on],[ARMS_FALL.l[2]-.15*Math.max(0,a1)*on,0,0],
+            [ARMS_FALL.r[0]+.18*a2*on,0,ARMS_FALL.r[1]-.07*a1*on],[ARMS_FALL.r[2]-.15*Math.max(0,a2)*on,0,0]];
+  const k=smoother(u/.9);
+  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].forEach((o,i)=>{_qq.setFromEuler(_e.set(...fk[i]));o.quaternion.copy(armCap[i]).slerp(_qq,k);});
+  L.arm.w.rotation.set(.1,0,0); Rt.arm.w.rotation.set(.1,0,0);}
+
+/* ---------- apply a pose while he is on the cage ---------- */
+let leanNow=0;
+function poseOnCage(t,clock){
+  const b=bodyAt(t<0?0:t);
+  const br=Math.sin(clock*1.3);
+  fig.position.copy(b.root); fig.rotation.set(0,0,0); fig.rotateY(b.yaw); fig.rotateX(b.tip);
+  hips.position.y=b.hy+(t<.6?.3*br:0);
+  spine.rotation.set(b.spX+(t<.6?.015*br:0),0,0);
+  let hdX=b.hdX,hdY=b.hdY; if(t<0){hdY=.3*Math.sin(clock*.23)*Math.max(0,Math.sin(clock*.11)); hdX=.04+.05*Math.sin(clock*.17);}
+  head.rotation.set(hdX,hdY,0);
+  leanNow=b.tip;
+  fig.updateMatrixWorld(true);
+  const tt=t<0?-1:t;
+  // feet and legs
+  for(const [leg,list,side] of [[L.leg,STEPS.L,1],[Rt.leg,STEPS.R,-1]]){
+    let f,cross=0;
+    f=footAt(list,tt);
+    const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S;
+    const poleL=V3(mix(.15,1.1,cross)*side,mix(-.2,.35,cross),mix(1,.45,cross));
+    const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
+    leg.h.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(leg.h,leg.k,LEG1,LEG2,cage.localToWorld(tgt),poleW,1);
+    setFlatFoot(leg,f.yaw,cross*.5*side*0);}
+  // hands and arms
+  if(tt>=T_LET){
+    if(!armCap)armCap=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].map(o=>o.quaternion.clone());
+    armsFree(tt-T_LET,smooth((tt-T_LET)/1.2));
+  } else {
+    for(const [arm,list,side] of [[L.arm,GRIP.L,1],[Rt.arm,GRIP.R,-1]]){
+      const g=handAt(list,tt);
+      const pole=V3(.8*side,-1,-.35).applyQuaternion(fig.quaternion).multiplyScalar(80);
+      arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+      solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
+    if(tt<T_LET-.05)armCap=null;}
+  return b;
+}
+
+const T_PIVOT=0;
+let rel=null;
+
+/* ---------- the red balloon: tied to the cage's top ring by the door, bobbing above it the whole time ----------
+   It lives in the stage (not the cage) so it can leave with him; before that it is pinned to the knot on the ring. */
+const BAL={R:34, SLACK:62, OFF:V3(104,34,34)};     // OFF: out to the right in a breeze, beside the cage and clear of the menu
+const balM=new THREE.MeshPhysicalMaterial({color:0xa8000b,roughness:.42,metalness:0,clearcoat:.45,clearcoatRoughness:.35,envMapIntensity:.45,transparent:true,opacity:.86,depthWrite:false});   // deep red latex, a soft sheen, a little see-through
+const strM=new THREE.MeshStandardMaterial({color:0xece2d4,roughness:.8});
+const bal=new THREE.Group();                          // origin at the knot, +y up through the balloon
+{// a latex balloon: round on top, a little longer and narrower underneath, pinched into the knot
+ const Rb=BAL.R, pts=[], N=64, lift=1.3*Rb+Rb*.16;
+ for(let i=0;i<=N;i++){const th=Math.PI*(1-i/N), c=Math.cos(th), lo=Math.max(0,c);
+   const x=Rb*Math.sin(th)*(1-.24*Math.pow(lo,2.4)), y=-Rb*c*(1+.3*Math.pow(lo,1.2));
+   pts.push(new THREE.Vector2(Math.max(x,.4),y+lift));}
+ const m=new THREE.Mesh(new THREE.LatheGeometry(pts,72),balM); m.castShadow=true; bal.add(m);
+ const knot=new THREE.Mesh(new THREE.SphereGeometry(Rb*.085,16,10),balM); knot.scale.set(1,.8,1); knot.position.y=Rb*.1; bal.add(knot);
+ const lip=new THREE.Mesh(new THREE.TorusGeometry(Rb*.07,Rb*.03,8,20),balM); lip.rotation.x=Math.PI/2; lip.position.y=Rb*.04; bal.add(lip);}
+stage.add(bal);
+let strMesh=null;
+function setString(a,b,len){                          // the string from a to b; it sags when slack
+  const d=a.distanceTo(b), sag=Math.sqrt(Math.max(0,len*len-d*d))*.5, pts=[];
+  for(let i=0;i<=16;i++){const t=i/16,p=a.clone().lerp(b,t);p.y-=sag*4*t*(1-t);pts.push(p);}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),40,.75,6,false);
+  if(strMesh){strMesh.geometry.dispose();strMesh.geometry=g;}else{strMesh=new THREE.Mesh(g,strM);strMesh.castShadow=true;stage.add(strMesh);}}
+const HOOK_A=DC+.27;                                  // on the top ring, over the left side of the doorway
+const BAL_HOOK=polar(R,HOOK_A,STRAIGHT+2);
+const _hk=new THREE.Vector3();
+function tetheredBalloon(clock){                      // tied on: bobbing, leaning a little away from the knot
+  stage.updateMatrixWorld(true);
+  const h=stage.worldToLocal(cage.localToWorld(_hk.copy(BAL_HOOK)));
+  const b=h.clone().add(BAL.OFF).add(V3(6*Math.sin(clock*.7),7*Math.sin(clock*1.1+1),5*Math.sin(clock*.5+2)));
+  bal.position.copy(b); bal.quaternion.setFromUnitVectors(V3(0,1,0),b.clone().sub(h).normalize());
+  setString(h,b,h.distanceTo(b)+3);}
+function setOut(on){const n=on?1:0; for(const o of [fig,bal]) o.traverse(c=>c.layers.set(n)); if(strMesh)strMesh.layers.set(n);}   // drawn in front of the cloud once he is out
+
+/* ---------- the jump: a short drop, then the balloon takes him ----------
+   Simulated: his hand (where his weight hangs) falls under gravity; the balloon pulls up (lift) against air drag; the
+   string between them only pulls when it is taut. He unties it with some slack in hand, so for a moment he simply
+   falls; then the string snaps taut, the jolt slows him, and the two rise together, drifting with the wind, up and
+   out of the frame. His body hangs from his hand along the string and swings after the jolt; his legs trail. */
+const BS={G:300, MM:1, MB:.25, LIFT:1350, CM:.25, CB:6, WIND:230, VOUT:120, VUP:125, DT:1/240};
+const qZ=z=>new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),z), qY=y=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),y);
+function legsFK(a,spread,swing=0,point=0){            // both legs bent by a (0 = straight); returns the hip height
+  for(const [leg,side] of [[L.leg,1],[Rt.leg,-1]]){
+    leg.h.quaternion.setFromEuler(_e.set(-a,0,spread*side+swing)); leg.k.quaternion.setFromEuler(_e.set(2*a,0,0)); leg.a.quaternion.setFromEuler(_e.set(-a+point,0,0));}
+  return ANKLE+(THIGH+SHIN)*Math.cos(a);}
+function armTo(arm,pW,pole){                          // solve one arm onto a stage-space point
+  const tW=stage.localToWorld(pW.clone()); arm.s.getWorldPosition(_t);
+  solveLimb(arm.s,arm.e,ARM1,ARM2,tW,_t.clone().add(pole.applyQuaternion(fig.getWorldQuaternion(_q)).multiplyScalar(80)),-1); arm.w.rotation.set(.2,0,0);}
+function captureRelease(clock){
+  const sw=swayAt(T_LET-1e-3,clock); hang.rotation.set(sw.rx,0,sw.rz); stage.updateMatrixWorld(true);
+  tetheredBalloon(clock); poseOnCage(T_LET-1e-3,clock); fig.updateMatrixWorld(true);
+  const hand=new THREE.Vector3(); L.arm.w.getWorldPosition(hand); stage.worldToLocal(hand);
+  const p0=new THREE.Vector3(); fig.getWorldPosition(p0); stage.worldToLocal(p0);
+  const q0=new THREE.Quaternion(); fig.getWorldQuaternion(q0); q0.premultiply(stage.getWorldQuaternion(new THREE.Quaternion()).invert());
+  const o=massOffset(); relTilt={x:-o.x*2.5,z:-o.z*2.5};          // pushing off kicks the cage back a little
+  stage.add(fig); setOut(true);
+  const off0=hand.clone().sub(p0).applyQuaternion(q0.clone().invert()).divideScalar(FIG_S);   // where his hand is, in his own frame
+  rel={h0:hand,b0:bal.position.clone(),LS:hand.distanceTo(bal.position)+BAL.SLACK,p0,q0,off0,hy0:hips.position.y,
+       legs:[L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone()),
+       v0:fwdOf(DC).multiplyScalar(BS.VOUT).add(V3(0,BS.VUP,0)),arms:[Rt.arm.s,Rt.arm.e].map(o=>o.quaternion.clone()),
+       spX:spine.rotation.x,hdX:head.rotation.x,sim:null};
+}
+function simStep(s,dt){
+  s.vh.y-=BS.G*dt; s.vh.multiplyScalar(1-BS.CM*dt/BS.MM); s.h.addScaledVector(s.vh,dt);
+  s.vb.y+=(BS.LIFT-BS.G*BS.MB)/BS.MB*dt; s.vb.x+=BS.WIND/BS.MB*dt; s.vb.multiplyScalar(1-Math.min(.9,BS.CB/BS.MB*dt)); s.b.addScaledVector(s.vb,dt);
+  const d=s.b.clone().sub(s.h), l=d.length(), rl=s.LS;
+  if(l>rl){const n=d.divideScalar(l), ex=l-rl, wb=(1/BS.MB)/(1/BS.MB+1/BS.MM);
+    s.b.addScaledVector(n,-ex*wb); s.h.addScaledVector(n,ex*(1-wb));
+    const rv=s.vb.clone().sub(s.vh).dot(n);
+    if(rv>0){const j=rv/(1/BS.MB+1/BS.MM)*1.1; s.vb.addScaledVector(n,-j/BS.MB); s.vh.addScaledVector(n,j/BS.MM); if(s.tc===null)s.tc=s.u;}}
+  s.u+=dt;}
+function poseBalloon(u,clock){
+  const r=rel;
+  if(!r.sim||u<r.sim.u-1e-6) r.sim={u:0,h:r.h0.clone(),vh:r.v0.clone(),b:r.b0.clone(),vb:V3(0,0,0),LS:r.LS,tc:null};
+  const s=r.sim; while(s.u<u&&s.u<30) simStep(s,BS.DT);
+  const h=s.h, b=s.b, dir=b.clone().sub(h).normalize(), taut=h.distanceTo(b)>=s.LS-1.5;
+  const w=s.tc===null?-1:u-s.tc;                                   // seconds since the string caught him
+  const lag=w<0?0:.3*Math.sin(2.3*w)*Math.exp(-.55*w)+.04*Math.sin(clock*.9);   // the swing after the jolt, then a slow sway
+  const up=V3(0,1,0).lerp(dir,w<0?.25:smooth(w/.25)).normalize();
+  const yaw=mix(DC,.3,smoother((u-.3)/2.4));
+  // everything starts exactly from his take-off pose and eases into the hanging pose (no jump cut)
+  const kb=smoother(u/.5);
+  const qT=qZ(lag).multiply(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0),up)).multiply(qY(yaw));
+  const q=r.q0.clone().slerp(qT,kb);
+  const a=w<0?mix(.12,.5,smooth(u/.4)):mix(.5,.14,smooth(w/1.2))+.04*Math.sin(clock*1.2);
+  const hyT=legsFK(a,.07,-1.4*lag,.35*smooth(u/.6)), hy=mix(r.hy0,hyT,kb); hips.position.y=hy;
+  [L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{_qq.copy(o.quaternion);o.quaternion.copy(r.legs[i]).slerp(_qq,kb);});
+  const off=r.off0.clone().lerp(V3(12,hy+92,4),kb).multiplyScalar(FIG_S);
+  fig.quaternion.copy(q); fig.position.copy(h).sub(off.applyQuaternion(q));
+  spine.rotation.set(mix(r.spX,.03-.4*lag,kb),0,0);
+  head.rotation.set(mix(r.hdX,w<0?-.2:-.55,smooth(u/.6)),.15*Math.sin(clock*.3)*smooth(w/2),0);
+  fig.updateMatrixWorld(true);
+  armTo(L.arm,h.clone(),V3(.9,-.3,-.3));
+  const ra=w<0?[-2.3,0,-.5,-.3]:[mix(-2.3,-.45,smooth(w/.8)),0,mix(-.5,-1.05,smooth(w/.8)),-.5];   // his free arm flies up in the drop, then rests out to the side
+  _qq.setFromEuler(_e.set(ra[0],ra[1],ra[2])); Rt.arm.s.quaternion.copy(r.arms[0]).slerp(_qq,smooth(u/.3));
+  _qq.setFromEuler(_e.set(ra[3],0,0)); Rt.arm.e.quaternion.copy(r.arms[1]).slerp(_qq,smooth(u/.3));
+  bal.position.copy(b); bal.quaternion.setFromUnitVectors(V3(0,1,0),taut?dir:V3(0,1,0).lerp(dir,.4).normalize());
+  setString(h,b,s.LS);
+  return w>.9;
+}
+
+function poseFalling(u){
+  // he keeps tumbling backwards past horizontal until he is falling head-first, slowly twisting
+  const target=-2.55, kd=Math.max(.5,rel.w0/(target-rel.tip0));
+  const dTip=(rel.w0/kd)*(1-Math.exp(-kd*u))-.1*Math.max(0,u-2.5);
+  const twist=(rel.twistAmp??.14)*smoother(u/2.6)+.06*Math.sin(u*.7), roll=.1*smoother(u/2)+.05*Math.sin(u*.9);   // stays in profile, like the reference
+  const q=rel.q.clone().multiply(_qq.setFromEuler(_e.set(dTip,twist,roll,"XYZ")));
+  fig.quaternion.copy(q);
+  hips.position.y=rel.hy;
+  const g=58, ka=.7;
+  const pel=rel.pel.clone();
+  pel.x+=rel.vel.x/ka*(1-Math.exp(-ka*u)); pel.z+=rel.vel.z/ka*(1-Math.exp(-ka*u));
+  pel.y+=rel.vel.y*u-.5*g*u*u;
+  fig.position.copy(pel).sub(V3(0,rel.hy*FIG_S,0).applyQuaternion(q));
+  // back arches, head thrown back toward the ground
+  const ar=smoother(u/1.1);
+  spine.rotation.set(mix(rel.spX,-.38,ar)+.04*Math.sin(u*1.3),.05*Math.sin(u*.8),0);
+  head.rotation.set(mix(rel.hdX,-.6,smoother(u/1.3)),.12*Math.sin(u*.9),0);
+  // arms reach up behind him, legs bend and kick apart; everything drifts slowly in the wind
+  const uu=u+(rel.uOff??T_PIVOT); armsFree(uu,smooth(uu/1.2));
+  const ka2=smoother(u/1.1), kl=smoother(u/.9), on=smooth(u/1.2);
+  const a1=Math.sin(u*1.25),a2=Math.sin(u*1.1+1.9),l1=Math.sin(u*1.05+.6),l2=Math.sin(u*.95+2.6);
+  const DR={arms:[[-.55+.28*a1*on,0,.42+.12*a2*on],[-.6-.25*Math.max(0,a1)*on,0,0],[-.95+.25*a2*on,0,-.3-.1*a1*on],[-.35-.3*Math.max(0,a2)*on,0,0]],
+            legs:[[-.95+.22*l1*on,0,.12],[1.25+.2*l1*on,0,0],[.35,0,0],[-.38+.22*l2*on,0,-.1],[.75+.22*Math.max(0,l2)*on,0,0],[.35,0,0]]};
+  [L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e].forEach((o,i)=>{_qq.setFromEuler(_e.set(...DR.arms[i]));o.quaternion.slerp(_qq,ka2);});
+  [L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].forEach((o,i)=>{_qq.setFromEuler(_e.set(...DR.legs[i]));o.quaternion.copy(rel.bones[i+4]).slerp(_qq,kl);});
+}
+
+/* ---------- gentle smoothing so every joint moves fluidly between frames ---------- */
+const SMOOTH_PARTS=()=>[fig,hips,spine,head,L.arm.s,L.arm.e,L.arm.w,Rt.arm.s,Rt.arm.e,Rt.arm.w,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a];
+let smoothState=null;
+function smoothPose(dt){
+  const parts=SMOOTH_PARTS();
+  if(!smoothState||smoothState.parent!==fig.parent||dt<=0||dt>.25){smoothState={parent:fig.parent,q:parts.map(o=>o.quaternion.clone()),p:parts.map(o=>o.position.clone())};return;}
+  const a=1-Math.exp(-dt/.045);
+  parts.forEach((o,i)=>{if(i===0&&fig.parent===stage)return;   // floating: the root follows the umbrella exactly
+    smoothState.q[i].slerp(o.quaternion,a); o.quaternion.copy(smoothState.q[i]); smoothState.p[i].lerp(o.position,a); o.position.copy(smoothState.p[i]);});
+}
+
+buildGrips();
+
+/* ---------- intro: he climbs the ladder, comes up through the hatch and sits down ---------- */
+const RUNG=26, HANDLE_TOP=FLOOR+2*RUNG;           // rungs every 26 units, two above the floor as handles
+const rungY=y=>FLOOR-RUNG*Math.round((FLOOR-y)/RUNG);
+const CLIMB_P=.9, CLIMB_V=2*RUNG/CLIMB_P;         // one full cycle climbs two rungs
+let climbStart=FLOOR-2*RUNG*18;                   // set from the screen size, so he climbs into view (whole cycles)
+// the gait follows how far he has climbed: on the last cycle body, arms and legs slow down together and stop
+const tauEnd=()=>(FLOOR-climbStart)/CLIMB_V;
+function tauOf(t){const t0=tauEnd()-CLIMB_P;if(t<=t0)return t;const u=Math.min(1,(t-t0)/(2*CLIMB_P));return t0+CLIMB_P*(1-(1-u)*(1-u));}
+const yLin=tau=>climbStart+CLIMB_V*tau;
+const climbY=t=>yLin(tauOf(t));
+const climbEnd=()=>tauEnd()+CLIMB_P+.05;
+// like the reference: left hand and left foot move up together, then the right pair half a cycle later.
+// each limb moves two rungs, so the hands always hold different rungs, leapfrogging each other
+const LIMBS={LH:{ph:0,off:150,max:HANDLE_TOP,x:-12,per:1,win:.42},LF:{ph:0,off:12,max:FLOOR,x:-9,per:1,win:.42},
+             RH:{ph:.5,off:150,max:HANDLE_TOP,x:12,per:1,win:.42},RF:{ph:.5,off:12,max:FLOOR,x:9,per:1,win:.42}};
+function limbRungAt(L_,m){const Pl=CLIMB_P*L_.per,te=L_.ph*CLIMB_P+(m+L_.win)*Pl;return Math.min(L_.max,rungY(yLin(te)+L_.off));}
+const climbEndLimb=name=>limbOnLadder(name,tauEnd()-1e-4);
+function limbOnLadder(name,t){
+  const L_=LIMBS[name], Pl=CLIMB_P*L_.per, n=Math.floor((t-L_.ph*CLIMB_P)/Pl), s=L_.ph*CLIMB_P+n*Pl, e=s+L_.win*Pl;
+  const prev=limbRungAt(L_,n-1), cur=limbRungAt(L_,n);
+  if(t>=e||prev===cur) return {y:t>=e?cur:prev,lift:0};
+  const k=smoother((t-s)/(e-s));return {y:mix(prev,cur,k),lift:Math.sin(Math.PI*k)};}
+
+// after the climb: step back off the top rung, turn round and step up to the front bars, hands on them, facing you
+const entry=track([
+  [0,   0,30, Math.PI,62,.10,-.04,-.2,0],
+  [.45, 0,30, Math.PI-.25,71,.05,0,-.05,0],      // steps off the top rung and is already turning
+  [.95, 1,42, 1.8,73.5,.03, 0,  -.05,-.2],
+  [1.4, 0,56, .45,73.5,.03, 0,  -.05,0],
+  [1.75,0,64, 0, 73.5,.02,  0,  -.05,0]]);       // at the front bars, facing you
+const T_ENTRY=1.75, T_OFF_LADDER=.6;
+function entryBody(tb){const [x,z,yaw,hy,spX,tip,hdX,hdY]=entry(tb);return {root:V3(x,FLOOR,z),hy,yaw,spX,tip,hdX,hdY};}
+function entryFoot(tb,side){             // planted steps off the ladder, round, and up to the bars
+  const rungFoot=V3(-side*9,climbEndLimb(side>0?"LF":"RF").y,6), back=V3(-side*9,FLOOR,36);   // starts where the climb left each foot
+  const under=(tt,f=2)=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*8.5*FIG_S).addScaledVector(fwdOf(b.yaw),f*FIG_S);};
+  const steps=side<0?[[0,.35,rungFoot,back,Math.PI,Math.PI-.3],[.6,.95,back,under(1.0),Math.PI-.3,1.5],[1.2,1.55,under(1.0),under(1.75),1.5,0]]
+                    :[[.3,.6,rungFoot,back,Math.PI,Math.PI-.3],[.85,1.2,back,under(1.25),Math.PI-.3,1.0],[1.4,1.75,under(1.25),under(1.75),1.0,0]];
+  let p=rungFoot.clone(),yaw=Math.PI;
+  for(const [a,b,p0,p1,y0,y1] of steps){if(tb<a)break;const k=smoother((tb-a)/(b-a));p=p0.clone().lerp(p1,k);p.y+=8*Math.sin(Math.PI*k);yaw=mix(y0,y1,k);}
+  return {p,yaw,cross:0};}
+function entryHand(tb,arm,side){
+  const handle=V3(-side*12,climbEndLimb(side>0?"LH":"RH").y,2);
+  const relaxedAt=tt=>{const b=entryBody(tt);return b.root.clone().addScaledVector(leftOf(b.yaw),side*15*FIG_S).addScaledVector(fwdOf(b.yaw),(10+30*b.spX)*FIG_S).setY(FLOOR+(b.hy+6-20*b.spX)*FIG_S);};
+  const leave=side<0?.3:.5;
+  let p;
+  if(tb<leave)p=handle;
+  else{const k=smoother((tb-leave)/.4);p=handle.clone().lerp(relaxedAt(tb),k);}
+  const kk=smoother((tb-1.2)/.5);                         // hands onto the bars
+  if(kk>0)p=p.clone().lerp(side>0?BAR_L:BAR_R,kk);
+  return p;}
+
+function applyRig(spec){                 // shared: body, then legs and arms solved onto their targets
+  fig.position.copy(spec.root); fig.rotation.set(0,0,0); fig.rotateY(spec.yaw); fig.rotateX(spec.tip);
+  hips.position.y=spec.hy; spine.rotation.set(spec.spX,0,0); head.rotation.set(spec.hdX,spec.hdY||0,0);
+  leanNow=0; fig.updateMatrixWorld(true);
+  for(const [leg,f,side] of [[L.leg,spec.feet[0],1],[Rt.leg,spec.feet[1],-1]]){
+    const tgt=f.p.clone(); tgt.y+=ANKLE_H*FIG_S; const c=f.cross||0;
+    const poleL=spec.kneePole?spec.kneePole(side):V3(mix(.15,1.1,c)*side,mix(-.2,.35,c),mix(1,.45,c));
+    const pole=poleL.applyQuaternion(fig.quaternion).multiplyScalar(80);
+    leg.h.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(leg.h,leg.k,LEG1,LEG2,cage.localToWorld(tgt),poleW,1); setFlatFoot(leg,f.yaw);}
+  for(const [arm,g,side] of [[L.arm,spec.hands[0],1],[Rt.arm,spec.hands[1],-1]]){
+    const pole=(spec.elbowPole?spec.elbowPole(side):V3(.8*side,-1,-.35)).applyQuaternion(fig.quaternion).multiplyScalar(80);
+    arm.s.getWorldPosition(_t); const poleW=cage.localToWorld(cage.worldToLocal(_t.clone()).add(pole));
+    solveLimb(arm.s,arm.e,ARM1,ARM2,cage.localToWorld(g.clone()),poleW,-1); arm.w.rotation.set(.25,0,0);}
+}
+// while he is completely hidden inside the cloud the climb runs faster (nobody sees it), so he can
+// start deep in the cloud and still reach the cage in a reasonable time
+const HIDDEN_SPEED=3, MAX_CLIMB=60;
+let warpT=null, warpI=null;           // real seconds -> intro seconds, built in layout()
+function warpIntro(ti){
+  if(!warpT||ti<=0) return ti;
+  const n=warpT.length-1; if(ti>=warpT[n]) return warpI[n]+(ti-warpT[n]);
+  let lo=0,hi=n; while(hi-lo>1){const m=(lo+hi)>>1; if(warpT[m]<=ti)lo=m; else hi=m;}
+  return mix(warpI[lo],warpI[hi],(ti-warpT[lo])/(warpT[hi]-warpT[lo]));}
+const poseIntro=(ti,clock)=>poseIntroAt(warpIntro(ti),clock);
+function poseIntroAt(ti,clock){
+  const tA=climbEnd();
+  if(ti<tA){                                   // climbing, seen from behind
+    const tau=tauOf(ti), y=yLin(tau), bob=4*Math.sin(tau/CLIMB_P*Math.PI*4-1.2)*clamp01((tauEnd()-tau)/(.7*CLIMB_P));   // rises in small surges with each leg push
+    const LH=limbOnLadder("LH",tau),RH=limbOnLadder("RH",tau),LF=limbOnLadder("LF",tau),RF=limbOnLadder("RF",tau);
+    const feet=[{p:V3(LIMBS.LF.x,LF.y,6+11*LF.lift),yaw:Math.PI},{p:V3(LIMBS.RF.x,RF.y,6+11*RF.lift),yaw:Math.PI}];
+    feet[0].p.y+=14*LF.lift; feet[1].p.y+=14*RF.lift;   // knee comes up high on each step
+    const hands=[V3(LIMBS.LH.x,LH.y+7*LH.lift,2+9*LH.lift),V3(LIMBS.RH.x,RH.y+7*RH.lift,2+9*RH.lift)];
+    applyRig({root:V3(0,y+bob,30),yaw:Math.PI,tip:-.04,hy:62,spX:.1,   // about an arm's length from the ladder, like the reference
+      hdX:-.28+.05*Math.sin(ti*.7),hdY:.1*Math.sin(ti*.4),feet,hands,
+      kneePole:side=>V3(.35*side,.1,1),elbowPole:side=>V3(.45*side,-1,-.35)});
+    return {onLadder:true};
+  }
+  const tb=Math.min(ti-tA,T_ENTRY), b=entryBody(tb);
+  applyRig({...b,feet:[entryFoot(tb,1),entryFoot(tb,-1)],hands:[entryHand(tb,L.arm,1),entryHand(tb,Rt.arm,-1)]});
+  return {onLadder:tb<T_OFF_LADDER, seated:ti-tA>=T_ENTRY};
+}
+
+/* he lets go of the ladder: falls backwards and twists into profile as he tumbles */
+function captureLadderFall(ti,clock){
+  const pelAt=tt=>{poseIntro(tt,clock); fig.updateMatrixWorld(true); const p=new THREE.Vector3(); hips.getWorldPosition(p); stage.worldToLocal(p); return p;};
+  const p0=pelAt(ti-1/60), pel=pelAt(ti);
+  const vel=pel.clone().sub(p0).multiplyScalar(60).multiplyScalar(.4);
+  const back=V3(0,0,1).applyQuaternion(cage.getWorldQuaternion(new THREE.Quaternion())); vel.addScaledVector(back,30); vel.y+=12;
+  const qs=new THREE.Quaternion(); fig.getWorldQuaternion(qs); const qstage=new THREE.Quaternion(); stage.getWorldQuaternion(qstage); qs.premultiply(qstage.invert());
+  const bones=[L.arm.s,L.arm.e,Rt.arm.s,Rt.arm.e,L.leg.h,L.leg.k,L.leg.a,Rt.leg.h,Rt.leg.k,Rt.leg.a].map(o=>o.quaternion.clone());
+  armCap=bones.slice(0,4);
+  stage.add(fig);
+  rel={pel,vel,q:qs,hy:hips.position.y,bones,spX:spine.rotation.x,hdX:head.rotation.x,w0:-1.5,tip0:.06,uOff:0,twistAmp:1.35};
+}
+
+
+/* ---------- layout: map frame pixels to screen and world, then place the cloud under the cage ---------- */
+let W=1,H=1,unit=1,climbSet=false,HTg=1,FLOAT=null;
+const _ray=new THREE.Vector3();
+function toStage(x,y,z){                       // a page point (px, from the top of the sky) at stage depth z -> stage units
+  _ray.set(x/W*2-1,1-y/HTg*2,.5).unproject(camera).sub(camera.position).normalize();
+  const zW=stage.position.z+z*unit; return stage.worldToLocal(camera.position.clone().addScaledVector(_ray,(zW-camera.position.z)/_ray.z));}
+// the ladder ends, and the climb starts, inside a part of the cloud that is in front, so he climbs out of it
+let frontCol=null;                         // front matte down the ladder's column, one value per 2 cut-out rows
+const ladderClip=new THREE.Plane(new THREE.Vector3(0,1,0),1e6); iron.clippingPlanes=[ladderClip]; renderer.localClippingEnabled=true;
+function layout(){
+  W=stageEl.clientWidth; H=stageEl.clientHeight;          // the first screen: the composition is laid out on it
+  const HT=Math.max(H,skyEl.clientHeight);                  // the canvas also runs down behind the about section
+  const L=skyLayout(W,H), {portrait,k,sx,sy}=L, cl=L.cloud;
+  const dpr=Math.min(devicePixelRatio||1,2,Math.max(1,1.7/k));
+  renderer.setPixelRatio(dpr); renderer.setSize(W,HT,false); bgUni.res.value.set(W*dpr,HT*dpr); bgUni.fold.value=H*dpr;
+  bgUni.rect.value.set(cl.x*dpr,cl.y*dpr,cl.w*dpr,cl.h*dpr); placeCloudCSS(skyEl,L,H);
+  // the camera frames the first screen exactly as before; a view offset extends the picture downward
+  const full=2*HT-H, D=3000, Hw=2*D*Math.tan(THREE.MathUtils.degToRad(FOV/2));
+  camera.fov=2*THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV/2))*full/H));
+  camera.aspect=W/full; camera.setViewOffset(W,full,0,HT-H,W,HT); camera.position.set(0,0,D); camera.updateProjectionMatrix();
+  unit=k*L.m*Hw/H*(portrait?CAGE_SCALE_TALL:CAGE_SCALE_WIDE);
+  stage.position.set((sx/W-.5)*Hw*W/H,(.5-sy/H)*Hw,0);
+  stage.scale.setScalar(unit);
+  const upx=unit*H/Hw;                                                       // screen px per cage unit
+  camera.updateMatrixWorld(true); stage.updateMatrixWorld(true); HTg=HT;
+  BS.WIND=portrait?170:900;                                                 // a breeze carries him off to the right, below the menu
+  BAL.OFF.set(portrait?14:34,portrait?82:84,26);                             // just above the cage, beside the door
+  // where he floats under the umbrella: beside the cage, over the sunlit side of the cloud; and, scrolled to the bottom,
+  // down beside the about text (page px). Scrolling moves him from one to the other.
+  if(!climbSet&&frontCol){
+    const depth=(stage.position.y+Hw/2)/unit, nOf=d=>Math.ceil((FLOOR+d)/(2*RUNG));
+    const cs=cl.w/SKY.CW, ramp=.035*(H-cl.y);                                 // screen px per cut-out px
+    const hidden=y=>{const r=Math.round((y-cl.y)/cs/2); return r>=0&&r*2<590&&(y>H-ramp||frontCol[r]>.6);};   // inside the cloud, in front
+    const covered=c=>{for(let u=c-30;u<=c+200;u+=5) if(!hidden(sy-u*upx)) return false; return true;};   // feet to head
+    climbStart=FLOOR-2*RUNG*nOf(Math.min(1000,depth+40));                  // fallback: the old start
+    for(let n=4;n<=nOf(Math.min(2000,depth+260));n++) if(covered(FLOOR-2*RUNG*n)){climbStart=FLOOR-2*RUNG*n;break;}   // he starts just inside the cloud: fewer rungs
+    warpT=[0]; warpI=[0]; const dt=.02, tA=climbEnd();
+    for(let t=0;t<tA;t+=dt){const sp=covered(climbY(t))?HIDDEN_SPEED:1; warpT.push(warpT[warpT.length-1]+dt/sp); warpI.push(t+dt);}
+    const total=warpT[warpT.length-1], f=Math.min(1,MAX_CLIMB/total); if(f<1) warpT=warpT.map(t=>t*f);   // big screens: a brisker climb, at most MAX_CLIMB s
+    climbSet=true;}
+  ladderClip.constant=-(stage.position.y+(climbStart-30)*unit);
+  // sun shadows cover the cage
+  const c=stage.position.clone().add(new THREE.Vector3(0,110*unit,0));
+  sun.target.position.copy(c); sun.position.copy(c).addScaledVector(SUN_DIR,900*unit);
+  const sc=sun.shadow.camera, e=190*unit; sc.left=-e;sc.right=e;sc.top=e;sc.bottom=-e;sc.near=1;sc.far=2000*unit;sc.updateProjectionMatrix();
+  sun.shadow.normalBias=.4*unit;
+}
+
+/* ---------- timeline ---------- */
+let t0=null, released=false, relTilt={x:0,z:0}, lastNow=null;
+function massOffset(){            // his weight pulls the cage a little toward where he stands and leans
+  const r=Math.hypot(fig.position.x,fig.position.z)+1e-6, ext=r+55*Math.max(0,Math.sin(-leanNow));
+  const k=8e-6; return {x:k*fig.position.z/r*ext, z:-k*fig.position.x/r*ext};}
+function swayAt(t,clock){
+  // a slow pendulum swing from side to side, gentler once he starts moving
+  const calm=t===null?1:mix(1,.45,smooth(t/3));
+  let rx=calm*.0018*Math.sin(clock*.95*.5+1.2), rz=calm*.0062*Math.sin(clock*.95);
+  if(t===null) return {rx,rz};
+  if(t<T_RELEASE){const o=massOffset(); return {rx:rx+o.x, rz:rz+o.z};}
+  const u=t-T_RELEASE, d=Math.exp(-.45*u)*(Math.cos(1.1*u)+.41*Math.sin(1.1*u));   // his weight is gone: the cage swings back
+  return {rx:rx+relTilt.x*d, rz:rz+relTilt.z*d};
+}
+let seenClimb=false; try{seenClimb=localStorage.getItem("climbed")==="1";}catch(e){}   // returning visitors: he is already at the bars
+let mode=reduce||seenClimb?"main":"intro", introStart=null, fallStart=null, pendingMain=false, introState=null;
+function frame(now){
+  const clock=now/1000;
+  if(introStart===null)introStart=now;
+  if(mode==="intro"){
+    const ti=(now-introStart)/1000;
+    door.rotation.y=0;
+    if(fig.parent!==cage)cage.add(fig);
+    const s=swayAt(null,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
+    introState=poseIntro(ti,clock); tetheredBalloon(clock);
+    shadow.visible=fig.position.y>FLOOR-3&&Math.hypot(fig.position.x,fig.position.z)>HATCH+4;
+    shadow.position.x=fig.position.x; shadow.position.z=fig.position.z;
+    if(introState.seated){mode="main"; t0=pendingMain?now:null; pendingMain=false; try{localStorage.setItem("climbed","1");}catch(e){}}
+    return finishFrame(now);
+  }
+  if(mode==="ladderFall"){
+    const s=swayAt(null,clock); hang.rotation.set(s.rx,0,s.rz);
+    poseFalling((now-fallStart)/1000); shadow.visible=false;
+    return finishFrame(now);
+  }
+  const t=t0===null?null:(now-t0)/1000, tt=t===null?-1:t;
+  door.rotation.y=openSign*doorAngleAt(t);
+  if(tt<T_RELEASE){
+    if(released){cage.add(fig);released=false;}
+    const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz); stage.updateMatrixWorld(true);
+    const b=poseOnCage(tt,clock); tetheredBalloon(clock);
+    const r=Math.hypot(fig.position.x,fig.position.z);
+    shadow.visible=r<R-6; shadow.position.x=fig.position.x; shadow.position.z=fig.position.z; shadow.rotation.z=-b.yaw;
+  } else {
+    if(!released){captureRelease(clock); released=true; stageEl.classList.add("played");}
+    const s=swayAt(t,clock); hang.rotation.set(s.rx,0,s.rz);
+    const settled=poseBalloon(t-T_RELEASE,clock); shadow.visible=false;
+    stageEl.classList.toggle("landed",settled);
+  }
+  finishFrame(now);
+}
+function finishFrame(now){
+  const dt=lastNow===null?0:(now-lastNow)/1000; lastNow=now;
+  if(!window.__manual) smoothPose(dt);
+  // the sky and cloud, the 3D scene, the cloud's nearer puffs; then, once he is out of the cage, him and the
+  // umbrella again on top (layer 1): he floats in front of the cloud, not inside it
+  renderer.clear(); renderer.render(bgScene,bgCam); camera.layers.set(0); renderer.render(scene,camera); renderer.render(fgScene,bgCam);
+  if(released){renderer.clearDepth(); camera.layers.set(1); renderer.render(scene,camera); camera.layers.set(0);}
+}
+
+/* ---------- boot ---------- */
+const ldr=new THREE.TextureLoader();
+Promise.all([ldr.loadAsync(ASSETS+"clouds.webp"),ldr.loadAsync(ASSETS+"clouds_front.png")]).then(([tex,front])=>{
+  front.colorSpace=THREE.NoColorSpace; bgUni.front.value=front;
+  {const im=front.image, c=document.createElement("canvas"); c.width=im.width; c.height=im.height;
+   const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(im,0,0);
+   const x=Math.round(SKY.PEAK.x/SKY.CW*im.width), d=g.getImageData(x,0,1,im.height).data;
+   frontCol=Array.from({length:im.height},(_,i)=>d[i*4]/255);}
+  tex.colorSpace=THREE.NoColorSpace; tex.premultiplyAlpha=true; tex.minFilter=THREE.LinearMipmapLinearFilter; bgUni.tex.value=tex;
+  // reflections on the cage: the same sky with the cloud below the horizon
+  const ec=document.createElement("canvas"); ec.width=1024; ec.height=512; const g=ec.getContext("2d");
+  const gr=g.createLinearGradient(0,0,0,512);
+  [[0,"#17364a"],[.3,"#24506a"],[.5,"#3a6a80"],[.62,"#5b8492"],[1,"#78776c"]].forEach(([o,c])=>gr.addColorStop(o,c));
+  g.fillStyle=gr; g.fillRect(0,0,1024,512); g.drawImage(tex.image,280,215,560,364);
+  const env=new THREE.CanvasTexture(ec); env.colorSpace=THREE.SRGBColorSpace; env.mapping=THREE.EquirectangularReflectionMapping;
+  const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromEquirectangular(env).texture; pm.dispose();
+  layout(); canvas.classList.add("ready");
+  const loop=n=>{frame(n);requestAnimationFrame(loop)};
+  if(!window.__manual) requestAnimationFrame(loop);
+  window.__seek=(t,clock=10)=>{const now=clock*1000; mode="main"; t0=t===null?null:now-t*1000; frame(now);};
+  window.__seekIntro=(ti,clock=10)=>{const now=clock*1000; mode="intro"; introStart=now-ti*1000; frame(now);};
+  window.__ladderFall=(ti,u)=>{window.__seekIntro(ti); captureLadderFall(ti,10); mode="ladderFall"; fallStart=10000-u*1000; frame(10000);};
+  window.__dbg={leap:()=>({TL:T_LET,tc:rel&&rel.sim&&rel.sim.tc}),camera,head,fig,renderer,layout,frame,scene,bgScene,bgCam,cage,door,climb:()=>[climbStart,warpT?warpT[warpT.length-1]:tauEnd()]};
+  window.__ready=true;
+});
+{const ro=new ResizeObserver(()=>layout()); ro.observe(stageEl); ro.observe(skyEl);}
+document.fonts&&document.fonts.ready.then(()=>{if(canvas.classList.contains("ready")) layout();});   // the cage is placed from the words' width
+
+document.getElementById("letgo").addEventListener("click",()=>{
+  const now=performance.now();
+  stageEl.classList.add("waiting");                        // the button has been pressed; the text changes when he jumps
+  if(mode==="intro"){pendingMain=true; return;}          // still on his way up: he gets in, then goes straight for the door
+  if(mode==="main"&&t0!==null) return;
+  t0=reduce?now-30000:now; released=false; cage.add(fig); setOut(false); armCap=null; rel=null; smoothState=null;
+});
+document.getElementById("again").addEventListener("click",()=>{   // back to the start: the climb up through the cloud
+  const now=performance.now(); stageEl.classList.remove("played","landed","waiting");
+  mode=reduce?"main":"intro"; introStart=now; cage.add(fig); setOut(false); rel=null; armCap=null; released=false; t0=null; pendingMain=false; smoothState=null;
+});
