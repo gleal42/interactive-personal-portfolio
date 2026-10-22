@@ -146,3 +146,9 @@ nav .links a{text-shadow:0 1px 10px rgba(20,45,52,.75)}
   .balloon-mark{animation:none!important}
   .hand{animation:none}
 }
+/* the language switch, last in the menu: the other language, small and spaced; a soft ring when the browser prefers it */
+nav .links .lang{font-size:.8em;letter-spacing:.12em;align-self:center;padding:2px 9px;border:1px solid transparent;border-radius:999px}
+nav .links .lang.suggest{border-color:rgba(243,235,224,.55)}
+/* narrow phones: the Portuguese menu is longer, so tighten the spacing (and the switch) to keep it clear of the logo */
+@media (max-width:430px){nav .links{gap:11px}nav a{font-size:.9rem}nav .links .lang{padding:1px 6px;letter-spacing:.08em}}
+@media (max-width:370px){nav .links{gap:8px}nav a{font-size:.85rem}nav .brand img{width:38px;height:38px}}

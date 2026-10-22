@@ -25,17 +25,18 @@ function skyLayout(W,H){             // H = height of the first screen
     const textR=right(".intro p")||W*.4, lineR=right(".reveal h1");   // the intro, and "The door was never locked." after the jump
     sx=(Math.min(textR,W*.6)+W)/2;
     sx=Math.max(sx,lineR+110*k*m);                    // and never under the closing line
-    // the chain runs up through the menu row: if it would cut through a word, slide it into the nearest gap
-    const words=[...document.querySelectorAll("nav .links a")].map(a=>a.getBoundingClientRect()).filter(r=>r.width);
-    for(const r of words) if(sx>r.left-8&&sx<r.right+8){
-      const i=words.indexOf(r), prevR=i>0?words[i-1].right:-1e9, nextL=i<words.length-1?words[i+1].left:1e9;
-      const toL=(Math.max(prevR,r.left-60)+r.left)/2, toR=(r.right+Math.min(nextL,r.right+60))/2;
-      sx=Math.abs(toL-sx)<Math.abs(toR-sx)?toL:toR; break;}
     const navB=shortWide?52:82;                       // the cage, chain ring and balloon stay below the menu
     m=Math.max(1,Math.min(m,(H*.55-navB-18)/(145*k)));   // short screens: keep the cage base above the middle, so the cloud still shows
     sy=Math.max(H*.365,navB+18+145*k*m);
     w=Math.max(H*1.5*g*m,(W-sx)/.42);
   }
+  // the chain runs up through the menu row (phones and wide screens alike): if it would cut through a word,
+  // slide it into the nearest gap between words
+  const words=[...document.querySelectorAll("nav .links a")].map(a=>a.getBoundingClientRect()).filter(r=>r.width);
+  for(const r of words) if(sx>r.left-6&&sx<r.right+6){
+    const i=words.indexOf(r), prevR=i>0?words[i-1].right:-1e9, nextL=i<words.length-1?words[i+1].left:1e9;
+    const toL=(Math.max(prevR,r.left-60)+r.left)/2, toR=(r.right+Math.min(nextL,r.right+60))/2;
+    sx=Math.abs(toL-sx)<Math.abs(toR-sx)?toL:toR; break;}
   // the cloud's peak sits right under the cage; the cloud is big and may run off the right edge and below
   // the fold (scrolling reveals the rest of it)
   const s=w/SKY.CW;

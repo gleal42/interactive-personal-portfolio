@@ -16,6 +16,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,700&display=swap">
+<link rel="canonical" href="https://gleal42.github.io/interactive-personal-portfolio/">
+<link rel="alternate" hreflang="en" href="https://gleal42.github.io/interactive-personal-portfolio/">
+<link rel="alternate" hreflang="pt" href="https://gleal42.github.io/interactive-personal-portfolio/pt/">
+<link rel="alternate" hreflang="x-default" href="https://gleal42.github.io/interactive-personal-portfolio/">
+<script>/* a visitor who chose Portuguese before gets it again */try{if(localStorage.getItem("lang")==="pt")location.replace("pt/");}catch(e){}</script>
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -25,7 +30,7 @@
 <div class="stage" id="stage">
   <nav>
     <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="56" height="56"></a>
-    <div class="links"><a href="#work">work</a><a href="#services">services</a><a href="#about">about</a><a href="#contact">contact</a></div>
+    <div class="links"><a href="#work">work</a><a href="#services">services</a><a href="#about">about</a><a href="#contact">contact</a><a class="lang" href="pt/" hreflang="pt" lang="pt" aria-label="Ver em português">PT</a></div>
   </nav>
   <div class="copy" id="top">
     <div class="intro">
@@ -104,6 +109,12 @@
 </section>
 </div>
 
+<script>/* the language switch: remember the choice; if the browser prefers the other language and nothing was chosen yet, gently point at the switch */
+{const a=document.querySelector("nav .lang"), to=a.getAttribute("hreflang");
+ a.addEventListener("click",()=>{try{localStorage.setItem("lang",to);}catch(e){}});
+ let chosen=null; try{chosen=localStorage.getItem("lang");}catch(e){}
+ if(!chosen&&(navigator.languages||[navigator.language]).some(l=>String(l).toLowerCase().startsWith(to))) a.classList.add("suggest");}
+</script>
 <script src="sky.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module" src="scene.js"></script>
