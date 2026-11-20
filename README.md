@@ -61,6 +61,36 @@ To set up Pages on a fork:
 
 The site appears at `https://<username>.github.io/<repository>/`.
 
+### Custom domain
+
+Every asset path is relative, so the site works at the root of a domain unchanged; only the absolute
+links in the `<head>` (canonical, hreflang, share image) name the address, and `tools/set_domain.py`
+rewrites those. In order:
+
+1. **Buy the domain** (e.g. `goncaloleal.pt` or `.com`) at any registrar.
+2. **Verify it with GitHub first**, so nobody else can point a Pages site at it:
+   account *Settings → Pages → Add a domain*, then add the TXT record it shows.
+3. **Point DNS at GitHub Pages**:
+   - apex (`@`): `A` records `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+     and `AAAA` records `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153`
+   - `www`: `CNAME` → `gleal42.github.io`
+4. **Switch the site over** (only once DNS is in place, because the github.io address starts redirecting
+   to the domain as soon as `CNAME` is live):
+
+   ```bash
+   python3 tools/set_domain.py goncaloleal.pt --email ola@goncaloleal.pt
+   git add -A && git commit -m "Move to goncaloleal.pt" && git push
+   ```
+
+   This writes `CNAME`, `robots.txt` and `sitemap.xml`, rewrites the absolute links, and (with `--email`)
+   adds an email line under the LinkedIn button on both pages. Leave `--email` out until the address
+   receives mail; free forwarding from the registrar or Cloudflare Email Routing is enough.
+5. **Turn on HTTPS**: repository *Settings → Pages → Enforce HTTPS*, once GitHub has issued the certificate
+   (minutes to an hour after DNS resolves).
+
+The old `gleal42.github.io/interactive-personal-portfolio/` links keep working: GitHub redirects them.
+After the switch, refresh the LinkedIn link preview with LinkedIn's Post Inspector so it shows the new address.
+
 ## Structure
 
 ```
