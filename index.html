@@ -29,7 +29,7 @@
 <canvas id="scene" aria-label="A man in a green plaid shirt climbs a ladder up through a cloud into an old bronze birdcage hanging in the sky, where a red balloon is tied. When you open the door, he unties the balloon and jumps; for a moment he falls, then the balloon catches him and carries him up and out of sight."></canvas>
 <div class="stage" id="stage">
   <nav>
-    <a class="brand" href="#top" aria-label="Gonçalo, home"><img src="assets/logo-shirt.png" alt="" width="56" height="56"></a>
+    <a class="brand" href="#top"><img src="assets/logo-shirt.png" alt="Gonçalo Leal, back to top" width="56" height="56"></a>
     <div class="links"><a href="#work">work</a><a href="#services">services</a><a href="#about">about</a><a href="#contact">contact</a><a class="lang" href="pt/" hreflang="pt" lang="pt" aria-label="Ver em português">PT</a></div>
   </nav>
   <div class="copy" id="top">
@@ -40,7 +40,7 @@
     </div>
     <div class="reveal" aria-live="polite">
       <h1><span class="w">The door</span> <span class="w">was never</span> <span class="w">locked.</span></h1>
-      <p class="after"><a class="talk" href="#contact">let's talk</a><button id="again" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>watch again</button></p>
+      <p class="after"><a class="talk" href="#contact">let's talk</a><button id="again" type="button" aria-label="replay the jump"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>replay the jump</button></p>
     </div>
   </div>
 </div>
@@ -49,16 +49,22 @@
   <div class="inner wide">
     <h2>work</h2>
     <p class="lead">Things I've built.</p>
-    <div class="cards">
+    <div class="cards three">
       <article class="card">
         <span class="tag">automotive · C++</span>
         <h3>In-vehicle display software</h3>
-        <p>For an automotive software company, I built and tested the component that controls the displays in cars, from requirements to automated end-to-end tests. It shipped on a near-weekly release cycle at 80% test coverage and runs in production vehicles.</p>
+        <p>For an automotive software company, I built and tested the component that controls the displays in cars, from requirements to automated end-to-end tests. It shipped on a near-weekly release cycle, backed by a broad suite of automated tests, and runs in production vehicles.</p>
       </article>
       <article class="card">
-        <span class="tag">CI/CD · testing</span>
-        <h3>Catching version errors before they ship</h3>
-        <p>An automated check that validates a component's version numbers before every integration. It saves time on each one and cuts avoidable back-and-forth with external suppliers.</p>
+        <span class="tag">own product · in progress</span>
+        <h3>Notan, a black-and-white block puzzle</h3>
+        <p>A puzzle game of my own: cube and prism blocks in a tray, turned to make black-and-white pictures. I wrote a simulator that shows which pictures the pieces can make, and I'm using it to build the design card packs that will ship in the box.</p>
+      </article>
+      <article class="card">
+        <span class="tag">own product · 3D printing</span>
+        <h3>Parametric desk organizer</h3>
+        <p>A browser app for designing 3D-printable desk organizers: resize each section or assemble one from modules, then download print-ready STL files. Anything bigger than the print plate is split into parts that slide together on dovetails, and automated tests build hundreds of random designs to check that every part prints.</p>
+        <p><a href="https://github.com/gleal42/parametric-desk-organizer" rel="noopener" target="_blank">Code on GitHub</a></p>
       </article>
     </div>
   </div>
@@ -101,10 +107,11 @@
 </section>
 <section id="contact" class="sec">
   <div class="inner">
-    <img class="balloon-mark" src="assets/balloon.png" alt="" width="64" height="167">
+    <img class="balloon-mark" src="assets/balloon.png" alt="" aria-hidden="true" width="64" height="167">
     <h2>Where to next?</h2>
     <p>Tell me what you'd like to build. The quickest way to reach me is LinkedIn.</p>
     <a class="btn" href="https://www.linkedin.com/in/goncaloleal" rel="me noopener" target="_blank">Message me on LinkedIn</a>
+    <!-- domain:email -->
   </div>
 </section>
 </div>

@@ -92,6 +92,10 @@ h1{margin:0;font-weight:600;font-style:italic;font-size:clamp(2.2rem,5vw,4.2rem)
 .sec .inner.wide{max-width:64rem}
 .sec .lead{font-size:1.3rem;color:var(--cloud)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:8px}
+/* three cards: one row on wide screens, one column below, so none sits alone */
+.cards.three{grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cards.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.sec .alt{font-size:1rem;color:var(--cloud-dim)}
 /* five cards: three on the first row, two sharing the second, so none sits alone */
 @media (min-width:860px){.cards.three-two{grid-template-columns:repeat(6,minmax(0,1fr))}.cards.three-two>.card{grid-column:span 2}.cards.three-two>.card:nth-child(n+4){grid-column:span 3}}
 .card{border:1px solid rgba(243,235,224,.2);border-radius:10px;padding:22px 22px 24px;background:rgba(18,40,48,.38);display:grid;gap:8px;align-content:start}

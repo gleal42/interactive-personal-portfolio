@@ -29,7 +29,7 @@
 <canvas id="scene" aria-label="Um homem de camisa verde aos quadrados sobe uma escada através de uma nuvem até uma velha gaiola de bronze suspensa no céu, onde está atado um balão vermelho. Quando se abre a porta, ele desata o balão e salta; cai por um instante, e depois o balão apanha-o e leva-o para cima, até desaparecer."></canvas>
 <div class="stage" id="stage">
   <nav>
-    <a class="brand" href="#top" aria-label="Gonçalo, início"><img src="../assets/logo-shirt.png" alt="" width="56" height="56"></a>
+    <a class="brand" href="#top"><img src="../assets/logo-shirt.png" alt="Gonçalo Leal, voltar ao início" width="56" height="56"></a>
     <div class="links"><a href="#work">projetos</a><a href="#services">serviços</a><a href="#about">sobre</a><a href="#contact">contacto</a><a class="lang" href="../" hreflang="en" lang="en" aria-label="View in English">EN</a></div>
   </nav>
   <div class="copy" id="top">
@@ -40,7 +40,7 @@
     </div>
     <div class="reveal" aria-live="polite">
       <h1><span class="w">A porta</span> <span class="w">nunca esteve</span> <span class="w">trancada.</span></h1>
-      <p class="after"><a class="talk" href="#contact">vamos conversar</a><button id="again" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ver de novo</button></p>
+      <p class="after"><a class="talk" href="#contact">vamos conversar</a><button id="again" type="button" aria-label="repetir o salto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>repetir o salto</button></p>
     </div>
   </div>
 </div>
@@ -49,16 +49,22 @@
   <div class="inner wide">
     <h2>projetos</h2>
     <p class="lead">O que já construí.</p>
-    <div class="cards">
+    <div class="cards three">
       <article class="card">
         <span class="tag">automóvel · C++</span>
         <h3>Software para os ecrãs dos carros</h3>
-        <p>Para uma empresa de software automóvel, desenvolvi e testei o componente que controla os ecrãs dos carros, dos requisitos aos testes automáticos de ponta a ponta. Era entregue num ciclo quase semanal, com 80% de cobertura de testes, e está em veículos de produção.</p>
+        <p>Para uma empresa de software automóvel, desenvolvi e testei o componente que controla os ecrãs dos carros, dos requisitos aos testes automáticos de ponta a ponta. Era entregue num ciclo quase semanal, apoiado por uma bateria abrangente de testes automáticos, e está em veículos de produção.</p>
       </article>
       <article class="card">
-        <span class="tag">CI/CD · testes</span>
-        <h3>Apanhar erros de versão antes da entrega</h3>
-        <p>Uma verificação automática que valida os números de versão de um componente antes de cada integração. Poupa tempo em todas elas e evita trocas de mensagens desnecessárias com fornecedores externos.</p>
+        <span class="tag">produto próprio · em curso</span>
+        <h3>Notan, um puzzle de blocos a preto e branco</h3>
+        <p>Um jogo de puzzle criado por mim: blocos em cubo e prisma num tabuleiro, rodados para formar imagens a preto e branco. Escrevi um simulador que mostra que imagens as peças conseguem formar, e estou a usá-lo para criar os baralhos de desenhos que vão na caixa.</p>
+      </article>
+      <article class="card">
+        <span class="tag">produto próprio · impressão 3D</span>
+        <h3>Organizador de secretária paramétrico</h3>
+        <p>Uma aplicação web para desenhar organizadores de secretária para impressão 3D: ajuste cada secção ou monte um a partir de módulos, e descarregue os ficheiros STL prontos a imprimir. O que for maior do que a base da impressora é dividido em peças que encaixam com rabos de andorinha, e testes automáticos geram centenas de desenhos aleatórios para verificar que todas as peças se imprimem.</p>
+        <p><a href="https://github.com/gleal42/parametric-desk-organizer" rel="noopener" target="_blank">Código no GitHub</a></p>
       </article>
     </div>
   </div>
@@ -101,10 +107,11 @@
 </section>
 <section id="contact" class="sec">
   <div class="inner">
-    <img class="balloon-mark" src="../assets/balloon.png" alt="" width="64" height="167">
+    <img class="balloon-mark" src="../assets/balloon.png" alt="" aria-hidden="true" width="64" height="167">
     <h2>E agora, para onde?</h2>
     <p>Diga-me o que gostaria de construir. A forma mais rápida de me contactar é pelo LinkedIn.</p>
     <a class="btn" href="https://www.linkedin.com/in/goncaloleal" rel="me noopener" target="_blank">Enviar mensagem no LinkedIn</a>
+    <!-- domain:email -->
   </div>
 </section>
 </div>
